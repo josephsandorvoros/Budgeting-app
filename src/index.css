@@ -1,0 +1,71 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #e2e8f0;
+  background: #0f1117;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.electron-shell-body {
+  background: radial-gradient(circle at top, #1a2435 0%, #0b101a 60%, #080c14 100%);
+  padding: 0;
+  overflow: hidden;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f4964 #121827;
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #121827;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #121827;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3f4964 0%, #313b55 100%);
+  border: 2px solid #121827;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #55617f 0%, #44506b 100%);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #6b7897 0%, #56637f 100%);
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+a {
+  color: inherit;
+}

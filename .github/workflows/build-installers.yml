@@ -1,0 +1,53 @@
+name: Build Installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            npm-script: dist:win
+            artifact-path: release/*.exe
+            artifact-name: budget-ledger-windows
+          - os: macos-latest
+            npm-script: dist:mac
+            artifact-path: release/*.dmg
+            artifact-name: budget-ledger-macos
+          - os: ubuntu-latest
+            npm-script: dist:linux
+            artifact-path: release/*.AppImage
+            artifact-name: budget-ledger-linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build installer
+        run: npm run ${{ matrix.npm-script }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-path }}
+          if-no-files-found: error

@@ -1,0 +1,339 @@
+import { useEffect, useMemo, useState } from 'react';
+import EmojiPicker from 'emoji-picker-react';
+import { loadAppSetting, saveAppSetting } from '../utils/appSettings.js';
+
+const EXTRA_KEYWORDS = {
+  '🐶': ['dog', 'puppy', 'pet'],
+  '🐱': ['cat', 'kitty', 'pet'],
+  '🏠': ['house', 'home'],
+  '🏦': ['bank', 'checking', 'savings'],
+  '💳': ['card', 'credit', 'debit'],
+  '🚗': ['car', 'auto', 'vehicle'],
+  '🍽️': ['food', 'meal', 'dining'],
+  '🛒': ['shopping', 'groceries', 'store'],
+  '🏥': ['health', 'medical', 'hospital'],
+  '✈️': ['travel', 'flight', 'plane'],
+  '🎓': ['school', 'education', 'college'],
+  '💡': ['electric', 'utility', 'power'],
+};
+
+function toKey(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function tokenizeLabel(label) {
+  return String(label || '')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+function normalizeIconData(options = [], groups = {}) {
+  const map = new Map();
+
+  const upsert = (emoji, keywords = []) => {
+    if (!emoji) return;
+    if (!map.has(emoji)) map.set(emoji, { emoji, keywords: [] });
+    const item = map.get(emoji);
+    const merged = new Set([
+      ...item.keywords,
+      ...keywords.map(toKey),
+      ...(EXTRA_KEYWORDS[emoji] || []).map(toKey),
+    ]);
+    item.keywords = Array.from(merged).filter(Boolean);
+  };
+
+  options.forEach((entry) => {
+    if (typeof entry === 'string') {
+      upsert(entry);
+    } else if (entry && typeof entry === 'object') {
+      upsert(entry.emoji, Array.isArray(entry.keywords) ? entry.keywords : []);
+    }
+  });
+
+  Object.entries(groups || {}).forEach(([groupName, entries]) => {
+    const groupTokens = tokenizeLabel(groupName);
+
+    (entries || []).forEach((entry) => {
+      if (typeof entry === 'string') {
+        upsert(entry, groupTokens);
+      } else if (entry && typeof entry === 'object') {
+        const k = Array.isArray(entry.keywords) ? entry.keywords : [];
+        upsert(entry.emoji, [...k, ...groupTokens]);
+      }
+    });
+  });
+
+  return Array.from(map.values());
+}
+
+export default function IconPicker({
+  value,
+  onChange,
+  options = [],
+  groups = {},
+  storageKey = 'icon_picker',
+}) {
+  const [query, setQuery] = useState('');
+  const [tab, setTab] = useState('All');
+  const [showFullLibrary, setShowFullLibrary] = useState(false);
+  const [customDraft, setCustomDraft] = useState('');
+  const [favorites, setFavorites] = useState([]);
+  const [recent, setRecent] = useState([]);
+  const [customIcons, setCustomIcons] = useState([]);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+  const [recentLoaded, setRecentLoaded] = useState(false);
+  const [customLoaded, setCustomLoaded] = useState(false);
+
+  const customEntries = useMemo(
+    () => customIcons.map((emoji) => ({ emoji, keywords: ['custom', 'user', 'personal'] })),
+    [customIcons],
+  );
+
+  const allIcons = useMemo(
+    () => normalizeIconData([...options, ...customEntries], groups),
+    [options, customEntries, groups],
+  );
+  const iconByEmoji = useMemo(() => {
+    const map = new Map();
+    allIcons.forEach((i) => map.set(i.emoji, i));
+    return map;
+  }, [allIcons]);
+
+  const groupTabs = useMemo(() => Object.keys(groups || {}), [groups]);
+  const tabs = ['Recent', 'Favorites', 'All', ...groupTabs];
+
+  useEffect(() => {
+    let cancelled = false;
+    setFavoritesLoaded(false);
+    loadAppSetting(`${storageKey}_favorites`, [], `${storageKey}_favorites`).then((value) => {
+      if (!cancelled) {
+        setFavorites(Array.isArray(value) ? value : []);
+        setFavoritesLoaded(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRecentLoaded(false);
+    loadAppSetting(`${storageKey}_recent`, [], `${storageKey}_recent`).then((value) => {
+      if (!cancelled) {
+        setRecent(Array.isArray(value) ? value : []);
+        setRecentLoaded(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCustomLoaded(false);
+    loadAppSetting(`${storageKey}_custom`, [], `${storageKey}_custom`).then((value) => {
+      if (!cancelled) {
+        setCustomIcons(Array.isArray(value) ? value : []);
+        setCustomLoaded(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!favoritesLoaded) return;
+    saveAppSetting(`${storageKey}_favorites`, favorites).catch(() => {
+      /* ignore persistence errors */
+    });
+  }, [favorites, storageKey, favoritesLoaded]);
+
+  useEffect(() => {
+    if (!recentLoaded) return;
+    saveAppSetting(`${storageKey}_recent`, recent).catch(() => {
+      /* ignore persistence errors */
+    });
+  }, [recent, storageKey, recentLoaded]);
+
+  useEffect(() => {
+    if (!customLoaded) return;
+    saveAppSetting(`${storageKey}_custom`, customIcons).catch(() => {
+      /* ignore persistence errors */
+    });
+  }, [customIcons, storageKey, customLoaded]);
+
+  const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
+  const recentSet = useMemo(() => new Set(recent), [recent]);
+
+  const tabItems = useMemo(() => {
+    if (tab === 'Recent') {
+      return recent.map((emoji) => iconByEmoji.get(emoji)).filter(Boolean);
+    }
+    if (tab === 'Favorites') {
+      return favorites.map((emoji) => iconByEmoji.get(emoji)).filter(Boolean);
+    }
+    if (tab === 'All') {
+      return allIcons;
+    }
+
+    const entries = groups[tab] || [];
+    return entries
+      .map((entry) => (typeof entry === 'string' ? entry : entry?.emoji))
+      .map((emoji) => iconByEmoji.get(emoji))
+      .filter(Boolean);
+  }, [tab, recent, favorites, iconByEmoji, allIcons, groups]);
+
+  const visible = useMemo(() => {
+    const term = toKey(query);
+    const source = term ? allIcons : tabItems;
+    if (!term) return source;
+
+    return source.filter((item) => {
+      if (toKey(item.emoji).includes(term)) return true;
+      return item.keywords.some((k) => k.includes(term));
+    });
+  }, [tabItems, allIcons, query]);
+
+  const selectIcon = (emoji) => {
+    onChange(emoji);
+    setRecent((prev) => {
+      const next = [emoji, ...prev.filter((e) => e !== emoji)].slice(0, 30);
+      return next;
+    });
+  };
+
+  const addCustomIcon = () => {
+    const icon = customDraft.trim();
+    if (!icon) return;
+    setCustomIcons((prev) => {
+      if (prev.includes(icon)) return prev;
+      return [icon, ...prev].slice(0, 100);
+    });
+    setCustomDraft('');
+    selectIcon(icon);
+    setTab('All');
+  };
+
+  const removeCustomIcon = (icon) => {
+    setCustomIcons((prev) => prev.filter((e) => e !== icon));
+    setFavorites((prev) => prev.filter((e) => e !== icon));
+    setRecent((prev) => prev.filter((e) => e !== icon));
+  };
+
+  const toggleFavorite = (emoji) => {
+    setFavorites((prev) => {
+      if (prev.includes(emoji)) return prev.filter((e) => e !== emoji);
+      return [emoji, ...prev].slice(0, 50);
+    });
+  };
+
+  return (
+    <div className="icon-picker-shell">
+      <div className="icon-picker-top">
+        <input
+          type="text"
+          className="icon-picker-search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search icons (money, food, home, travel...)"
+        />
+        <button
+          type="button"
+          className={`icon-picker-library-btn${showFullLibrary ? ' active' : ''}`}
+          onClick={() => setShowFullLibrary((v) => !v)}
+        >
+          {showFullLibrary ? 'Hide Full Emoji Library' : 'Browse Full Emoji Library'}
+        </button>
+      </div>
+
+      <div className="icon-picker-custom-row">
+        <input
+          type="text"
+          className="icon-picker-custom-input"
+          value={customDraft}
+          onChange={(e) => setCustomDraft(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && addCustomIcon()}
+          placeholder="Add your own icon (emoji or symbol)"
+        />
+        <button type="button" className="icon-picker-custom-btn" onClick={addCustomIcon}>Add Custom</button>
+      </div>
+
+      {showFullLibrary && (
+        <div className="icon-picker-full-library">
+          <EmojiPicker
+            onEmojiClick={(emojiData) => selectIcon(emojiData.emoji)}
+            lazyLoadEmojis
+            theme="dark"
+            width="100%"
+            height={320}
+            searchDisabled={false}
+            skinTonesDisabled
+            previewConfig={{ showPreview: false }}
+          />
+        </div>
+      )}
+
+      <div className="icon-picker-tabs">
+        {tabs.map((tabName) => {
+          const active = tabName === tab;
+          return (
+            <button
+              key={tabName}
+              type="button"
+              className={`icon-picker-tab${active ? ' active' : ''}`}
+              onClick={() => setTab(tabName)}
+            >
+              {tabName}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="icon-picker-grid" role="listbox" aria-label="Icon picker">
+        {visible.map((item) => {
+          const active = value === item.emoji;
+          const favored = favoriteSet.has(item.emoji);
+          const isRecent = recentSet.has(item.emoji);
+          return (
+            <div key={item.emoji} className={`icon-picker-card${active ? ' active' : ''}`}>
+              <button
+                type="button"
+                className="icon-picker-select"
+                onClick={() => selectIcon(item.emoji)}
+                title={`Pick ${item.emoji}`}
+              >
+                {item.emoji}
+              </button>
+              {customIcons.includes(item.emoji) && (
+                <button
+                  type="button"
+                  className="icon-picker-remove-custom"
+                  onClick={() => removeCustomIcon(item.emoji)}
+                  title="Remove custom icon"
+                >
+                  x
+                </button>
+              )}
+              <button
+                type="button"
+                className={`icon-picker-fav${favored ? ' active' : ''}`}
+                onClick={() => toggleFavorite(item.emoji)}
+                title={favored ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                {favored ? '★' : '☆'}
+              </button>
+              {isRecent && <span className="icon-picker-recent">recent</span>}
+            </div>
+          );
+        })}
+      </div>
+
+      {visible.length === 0 && <div className="icon-picker-empty">No matching icons for this search.</div>}
+    </div>
+  );
+}
