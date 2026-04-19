@@ -65,8 +65,8 @@ No extra runtime or dependency installation is required.
 ## Latest Downloads
 
 - Release page: https://github.com/josephsandorvoros/Budgeting-app/releases
-- Beta 1.0 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.0
-- Beta 1.0 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.0/Budget%20Ledger-1.0.0-win-x64.exe
+- Beta 1.1 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.1
+- Beta 1.1 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.1/Budget.Ledger-1.0.0-win-x64.exe
 
 ## CI Installers
 
@@ -76,7 +76,7 @@ Native multi-platform installer builds are configured in:
 
 Use that workflow to generate Windows, macOS, and Linux artifacts from one repository push.
 
-To publish a beta release from this repository, create and push a tag such as `beta1.0`.
+To publish a beta release from this repository, create and push a tag such as `beta1.2`.
 
 ## Notes
 
