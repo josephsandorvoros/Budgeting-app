@@ -2,9 +2,27 @@
 
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const db = require('./database.cjs');
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// Ensure Electron uses app-owned writable cache/session directories.
+try {
+  const appData = app.getPath('appData');
+  const baseDataDir = path.join(appData, 'BudgetLedger');
+  const cacheDir = path.join(baseDataDir, 'Cache');
+  const sessionDir = path.join(baseDataDir, 'Session');
+
+  fs.mkdirSync(cacheDir, { recursive: true });
+  fs.mkdirSync(sessionDir, { recursive: true });
+
+  app.setPath('userData', baseDataDir);
+  app.setPath('sessionData', sessionDir);
+  app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
+} catch {
+  // If this fails, Electron will fall back to default paths.
+}
 
 function sendWindowState(win) {
   if (!win || win.isDestroyed()) return;
