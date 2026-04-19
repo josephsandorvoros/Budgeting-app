@@ -1,5 +1,9 @@
 # Budget Ledger
 
+[![Build Status](https://github.com/josephsandorvoros/Budgeting-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/josephsandorvoros/Budgeting-app/actions/workflows/ci.yml)
+[![Installers](https://github.com/josephsandorvoros/Budgeting-app/actions/workflows/build-installers.yml/badge.svg)](https://github.com/josephsandorvoros/Budgeting-app/actions/workflows/build-installers.yml)
+[![Latest Tag](https://img.shields.io/github/v/tag/josephsandorvoros/Budgeting-app?label=latest%20tag)](https://github.com/josephsandorvoros/Budgeting-app/releases)
+
 Local-first desktop budgeting app with personal and business budget workflows, annual and monthly planning, transaction management, recurring bills, balance sheet tracking, data import/export, and reusable templates.
 
 ## Stack
@@ -57,6 +61,12 @@ Artifacts are written to the release folder.
 3. Launch Budget Ledger from Start Menu/Desktop.
 
 No extra runtime or dependency installation is required.
+
+## Latest Downloads
+
+- Release page: https://github.com/josephsandorvoros/Budgeting-app/releases
+- Beta 1.0 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.0
+- Beta 1.0 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.0/Budget%20Ledger-1.0.0-win-x64.exe
 
 ## CI Installers
 
