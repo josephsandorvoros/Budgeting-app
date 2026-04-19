@@ -17,6 +17,8 @@ const SETTINGS_ITEMS = [
   { id: 'about', label: 'About', icon: 'ℹ️' },
 ];
 
+const FEEDBACK_EMAIL = 'support@budgetledger.app';
+
 function NewBudgetForm({ onSubmit, onCancel }) {
   const [name, setName] = useState('');
 
@@ -233,7 +235,7 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
         {!collapsed && (
           <div className="sidebar-help-row">
             <span className="sidebar-help-btn" onClick={onHelp} style={{ cursor: 'pointer' }}>⓪ Help</span>
-            <span className="sidebar-help-btn" onClick={() => window.open('mailto:joseph.s.voros@hybridcloudhq.com?subject=Budget%20App%20Feedback', '_blank')} style={{ cursor: 'pointer' }}>✉ Feedback</span>
+            <span className="sidebar-help-btn" onClick={() => window.open(`mailto:${FEEDBACK_EMAIL}?subject=Budget%20Ledger%20Feedback`, '_blank')} style={{ cursor: 'pointer' }}>✉ Feedback</span>
           </div>
         )}
       </div>

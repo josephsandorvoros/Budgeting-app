@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const db = require('./database.cjs');
 
@@ -24,10 +24,33 @@ function createWindow() {
     backgroundColor: '#0f1117',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
     },
     show: false,
+  });
+
+  const isSafeAppUrl = (url) => {
+    if (isDev) return url.startsWith('http://localhost:5173');
+    return url.startsWith('file://');
+  };
+
+  // Keep external URLs out of the app window and open them in the OS browser.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url) || /^mailto:/i.test(url)) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  win.webContents.on('will-navigate', (event, url) => {
+    if (isSafeAppUrl(url)) return;
+
+    event.preventDefault();
+    if (/^https?:\/\//i.test(url) || /^mailto:/i.test(url)) {
+      shell.openExternal(url);
+    }
   });
 
   if (isDev) {
