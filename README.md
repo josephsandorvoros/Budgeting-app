@@ -78,6 +78,23 @@ Use that workflow to generate Windows, macOS, and Linux artifacts from one repos
 
 To publish a beta release from this repository, create and push a tag such as `beta1.2`.
 
+## Documentation Update Checklist
+
+Update this README when any of these change:
+
+- install/run commands
+- release tag or direct download links
+- platform support or installer filenames
+- required prerequisites for developers or end users
+
+Usually skip README edits for:
+
+- internal refactors
+- minor styling tweaks
+- bug fixes that do not change user/developer workflows
+
+For version-by-version notes, prefer GitHub Release notes.
+
 ## Notes
 
 - Branding: Budget Ledger
