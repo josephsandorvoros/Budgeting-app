@@ -34,6 +34,8 @@ npm run build
 
 ## Desktop Installers
 
+End users do not need to install Node, Python, or any dependencies. The installer bundles everything needed to run the app.
+
 Windows installer (.exe):
 
 npm run dist:win
@@ -48,6 +50,14 @@ npm run dist:linux
 
 Artifacts are written to the release folder.
 
+## End-User Install (Windows)
+
+1. Download the latest `Budget Ledger-*-win-x64.exe` from GitHub Releases.
+2. Run the installer and follow the prompts.
+3. Launch Budget Ledger from Start Menu/Desktop.
+
+No extra runtime or dependency installation is required.
+
 ## CI Installers
 
 Native multi-platform installer builds are configured in:
@@ -55,6 +65,8 @@ Native multi-platform installer builds are configured in:
 .github/workflows/build-installers.yml
 
 Use that workflow to generate Windows, macOS, and Linux artifacts from one repository push.
+
+To publish a beta release from this repository, create and push a tag such as `beta1.0`.
 
 ## Notes
 
