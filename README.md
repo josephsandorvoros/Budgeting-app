@@ -95,6 +95,22 @@ Usually skip README edits for:
 
 For version-by-version notes, prefer GitHub Release notes.
 
+To make the workflow work to cerate the installers
+Push the tag first (from local):
+```
+git tag beta1.4
+git push origin beta1.4
+```
+
+✓ Workflow triggers, builds installers
+
+Then create the release on GitHub pointing to that tag:
+
+Go to Releases → "Draft a new release"
+Click "Choose a tag" → select the tag you just pushed
+Add release notes
+Publish
+
 ## Notes
 
 - Branding: Budget Ledger
