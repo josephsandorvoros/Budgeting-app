@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import NavBar from './components/NavBar.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import AnnualBudget from './pages/AnnualBudget.jsx';
@@ -57,6 +57,9 @@ export default function App() {
   const [page, setPage] = useState('dashboard');
   const [initialMonth, setInitialMonth] = useState(null);
   const [isWindowMaximized, setIsWindowMaximized] = useState(false);
+  const [emptyStateBusy, setEmptyStateBusy] = useState(false);
+  const [emptyStateError, setEmptyStateError] = useState('');
+  const restoreInputRef = useRef(null);
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
 
   const {
@@ -103,6 +106,28 @@ export default function App() {
     if (p !== 'monthly') setInitialMonth(null);
   };
 
+  const noDataPages = new Set(['templates', 'updates', 'data-management', 'whats-new', 'about', 'help']);
+  const canRenderWithoutBudget = noDataPages.has(page);
+
+  const handleEmptyStateRestore = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setEmptyStateBusy(true);
+    setEmptyStateError('');
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      await importAllData(parsed);
+      navigate('dashboard');
+    } catch (error) {
+      setEmptyStateError(error.message || 'Failed to restore backup.');
+    } finally {
+      setEmptyStateBusy(false);
+    }
+  };
+
   useEffect(() => {
     if (!isElectron) return;
 
@@ -126,7 +151,7 @@ export default function App() {
     };
   }, [isElectron]);
 
-  if (loading || !data) {
+  if (loading || (!data && !canRenderWithoutBudget)) {
     if (!loading && !data) {
       return (
         <div className={`app-shell${isWindowMaximized ? ' app-shell-maximized' : ''}`}>
@@ -146,11 +171,22 @@ export default function App() {
               <div className="card" style={{ maxWidth: 680, width: '100%', textAlign: 'center', display: 'grid', gap: 12 }}>
                 <div style={{ fontSize: 44 }}>📒</div>
                 <h2 style={{ margin: 0 }}>No Budget Data Yet</h2>
-                <div className="subtitle">Create your first budget or apply a template from Settings → Templates.</div>
+                <div className="subtitle">Create an empty budget, restore a backup, or start from a template.</div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <button className="btn-primary" onClick={() => createBudget('My Budget', new Date().getFullYear(), 'personal')}>Create Personal Budget</button>
                   <button className="btn-ghost" onClick={() => createBudget('Business Budget', new Date().getFullYear(), 'business')}>Create Business Budget</button>
+                  <button className="btn-ghost" onClick={() => navigate('templates')}>Browse Templates</button>
+                  <button className="btn-ghost" onClick={() => restoreInputRef.current?.click()} disabled={emptyStateBusy}>Restore Backup</button>
                 </div>
+                <input
+                  ref={restoreInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  style={{ display: 'none' }}
+                  onChange={handleEmptyStateRestore}
+                />
+                {emptyStateError && <div className="danger">{emptyStateError}</div>}
+                <div className="subtitle">Settings → Templates and Settings → Manage Data are also available before any budget is created.</div>
               </div>
             </main>
           </div>

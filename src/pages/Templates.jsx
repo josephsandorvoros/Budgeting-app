@@ -150,7 +150,7 @@ export default function Templates({
               value={saveDesc}
               onChange={e => setSaveDesc(e.target.value)}
             />
-            <button className="tp-btn tp-btn-primary" onClick={saveCurrent}>Save Current as Template</button>
+            <button className="tp-btn tp-btn-primary" onClick={saveCurrent} disabled={!currentBudget}>Save Current as Template</button>
           </div>
         </aside>
 

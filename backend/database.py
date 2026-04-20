@@ -180,9 +180,12 @@ def reset_all_data(full_state: dict, keep_templates: bool = True):
 
 def import_all_data(full_state: dict):
     with get_connection() as conn:
+        conn.execute("DELETE FROM budgets")
+        conn.execute("DELETE FROM app_settings WHERE key = 'currentBudgetId'")
+
         for budget_id, budget in (full_state.get("budgets") or {}).items():
             conn.execute(
-                "INSERT OR IGNORE INTO budgets (id, name, year, type, icon) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO budgets (id, name, year, type, icon) VALUES (?, ?, ?, ?, ?)",
                 (
                     budget_id,
                     budget.get("name", "Budget"),
@@ -196,20 +199,20 @@ def import_all_data(full_state: dict):
                 for cat_name in names:
                     cat_id = gen_id("cat")
                     conn.execute(
-                        "INSERT OR IGNORE INTO categories (id, budget_id, group_name, name, sort_order) VALUES (?, ?, ?, ?, ?)",
+                        "INSERT INTO categories (id, budget_id, group_name, name, sort_order) VALUES (?, ?, ?, ?, ?)",
                         (cat_id, budget_id, group, cat_name, sort_order)
                     )
                     sort_order += 1
                     amounts = (budget.get("budget") or {}).get(group, {}).get(cat_name, [])
                     for m in range(12):
                         conn.execute(
-                            "INSERT OR IGNORE INTO budget_amounts (budget_id, category_id, month_index, amount) VALUES (?, ?, ?, ?)",
+                            "INSERT INTO budget_amounts (budget_id, category_id, month_index, amount) VALUES (?, ?, ?, ?)",
                             (budget_id, cat_id, m, amounts[m] if m < len(amounts) else 0)
                         )
 
             for tx in (budget.get("transactions") or []):
                 conn.execute(
-                    "INSERT OR IGNORE INTO transactions (id, budget_id, date, description, category, group_name, amount, type, is_subscription, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO transactions (id, budget_id, date, description, category, group_name, amount, type, is_subscription, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (tx.get("id") or gen_id("tx"), budget_id, tx.get("date", ""), tx.get("description"),
                      tx.get("category"), tx.get("group") or tx.get("group_name", ""),
                      tx.get("amount", 0), tx.get("type"), 1 if (tx.get("isSubscription") or tx.get("is_subscription")) else 0,
@@ -220,7 +223,7 @@ def import_all_data(full_state: dict):
             for acc in (budget.get("accounts") or []):
                 acc_id = acc.get("id") or gen_id("acc")
                 conn.execute(
-                    "INSERT OR IGNORE INTO accounts (id, budget_id, name, subtype, asset_class, icon, start_balance, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO accounts (id, budget_id, name, subtype, asset_class, icon, start_balance, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (acc_id, budget_id, acc.get("name", ""), acc.get("subtype"),
                      acc.get("assetClass") or acc.get("asset_class", "ASSETS"),
                      acc.get("icon", "🏦"), acc.get("startBalance") or acc.get("start_balance", 0), acc_sort)
@@ -230,7 +233,7 @@ def import_all_data(full_state: dict):
                 for m, bal in enumerate(balances):
                     if bal is not None:
                         conn.execute(
-                            "INSERT OR IGNORE INTO account_balances (account_id, month_index, balance) VALUES (?, ?, ?)",
+                            "INSERT INTO account_balances (account_id, month_index, balance) VALUES (?, ?, ?)",
                             (acc_id, m, bal)
                         )
 

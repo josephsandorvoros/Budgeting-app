@@ -230,7 +230,7 @@ export default function Updates() {
         )}
 
         <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-          Tip: running the latest installer updates Budget Ledger in place. You do not need to manually uninstall first. You do however need to backup your data before installing a new version. The installer will rebuild with demo data, then just restore your backup from Settings → Manage Data and you should be good to go with the new version and all your data intact.
+          Tip: running the latest installer updates Budget Ledger in place. You do not need to manually uninstall first, and your local data should remain intact because it is stored outside the install folder. A backup is still recommended before major updates, but normal upgrades should not require backup and restore.
         </div>
 
         {error && <div className="danger">{error}</div>}

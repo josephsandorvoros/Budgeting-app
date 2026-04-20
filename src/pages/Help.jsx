@@ -17,7 +17,7 @@ const SECTIONS = [
       },
       {
         q: 'Creating your first budget',
-        a: 'Click the + icon next to PERSONAL BUDGETS or DOING BUSINESS in the sidebar, enter a name, pick an icon, and click Create. An empty budget is created with default income/expense categories ready to fill in.',
+        a: 'Click the + icon next to PERSONAL BUDGETS or DOING BUSINESS in the sidebar, enter a name, pick an icon, and click Create. New budgets start empty so you can either build from scratch or apply a template afterwards.',
       },
       {
         q: 'Switching budgets',
@@ -25,7 +25,7 @@ const SECTIONS = [
       },
       {
         q: 'Checking for app updates',
-        a: 'Open Settings → Updates to see your installed version, check the latest release, and download the newest installer for in-place upgrades.',
+        a: 'Open Settings → Updates to see your installed version, check the latest release, and download the newest installer for in-place upgrades. Normal reinstall-over-update should preserve your local data.',
       },
     ],
   },
@@ -65,7 +65,7 @@ const SECTIONS = [
       },
       {
         q: 'Empty year',
-        a: 'If you select a year with no data the grid still shows with zero values and editing is disabled. Add transactions for that year first to enable editing.',
+        a: 'If a budget year has no categories yet, the Annual Budget grid will only show totals. Add categories first, then the monthly budget cells become editable.',
       },
       {
         q: 'Row totals',
@@ -193,7 +193,7 @@ const SECTIONS = [
       },
       {
         q: 'Restoring from backup',
-        a: 'On the same page use Import JSON to restore from a backup file. This replaces all current data, so export first if you want to keep your existing data.',
+        a: 'On the same page use Import JSON to restore from a backup file. This replaces all current budget data, so export first if you want to keep your existing data. You can also restore immediately from the empty-state screen before creating a budget.',
       },
       {
         q: 'CSV export',
@@ -201,7 +201,7 @@ const SECTIONS = [
       },
       {
         q: 'Data persistence',
-        a: 'All data is saved to a local SQLite database managed by the backend. Settings and customisations (icon favourites, account groups, category layout) are also saved to the backend so they survive browser clears and reinstalls.',
+        a: 'All data is saved to a local SQLite database managed by the backend. Settings and customisations (icon favourites, account groups, category layout) are also saved locally. Normal app reinstalls usually preserve this data because it lives in the app data folder, not the install folder.',
       },
       {
         q: 'Reset to preview data',
