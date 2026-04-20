@@ -9,7 +9,8 @@ const db = require('./database.cjs');
 
 const isDev = process.env.NODE_ENV === 'development';
 const BACKEND_HOST = process.env.BUDGET_HOST || '127.0.0.1';
-const BACKEND_PORT = Number(process.env.BUDGET_PORT || 8765);
+const DEFAULT_BACKEND_PORT = isDev ? 8765 : 18765;
+const BACKEND_PORT = Number(process.env.BUDGET_PORT || DEFAULT_BACKEND_PORT);
 let backendProcess = null;
 
 // Ensure Electron uses app-owned writable cache/session directories.

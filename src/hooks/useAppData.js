@@ -3,8 +3,9 @@ import { DEFAULT_DATA, DEFAULT_ACCOUNTS, DEFAULT_BILLS } from '../data/defaults.
 
 const STORAGE_KEY = 'budget_app_v6';
 const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI;
+const IS_PACKAGED_ELECTRON = IS_ELECTRON && typeof window !== 'undefined' && window.location?.protocol === 'file:';
 const API_BASE = IS_ELECTRON
-  ? 'http://127.0.0.1:8765/api'
+  ? (IS_PACKAGED_ELECTRON ? 'http://127.0.0.1:18765/api' : 'http://127.0.0.1:8765/api')
   : '/api';
 const DEFAULT_TEMPLATE_ID = 'tpl_builtin_comprehensive';
 const YP_TEMPLATE_ID = 'tpl_builtin_young_professional';

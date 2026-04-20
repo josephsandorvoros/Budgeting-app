@@ -1,5 +1,8 @@
-const API_BASE = (typeof window !== 'undefined' && window.electronAPI)
-  ? 'http://127.0.0.1:8765/api'
+const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI;
+const IS_PACKAGED_ELECTRON = IS_ELECTRON && typeof window !== 'undefined' && window.location?.protocol === 'file:';
+
+const API_BASE = IS_ELECTRON
+  ? (IS_PACKAGED_ELECTRON ? 'http://127.0.0.1:18765/api' : 'http://127.0.0.1:8765/api')
   : '/api';
 
 function parseStoredValue(raw, fallback) {
