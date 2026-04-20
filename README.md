@@ -85,8 +85,8 @@ For more details on code signing, see the [License](#license) section.
 ## Latest Downloads
 
 - Release page: https://github.com/josephsandorvoros/Budgeting-app/releases
-- Beta 1.4 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.4
-- Beta 1.4 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.4/Budget.Ledger-1.0.0-win-x64.exe
+- Beta 1.5 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.5
+- Beta 1.5 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.5/Budget.Ledger-1.0.0-win-x64.exe
 
 ## In-App Updates
 
@@ -106,7 +106,7 @@ Native multi-platform installer builds are configured in:
 
 Use that workflow to generate Windows, macOS, and Linux artifacts from one repository push.
 
-To publish a beta release from this repository, create and push a tag such as `beta1.5`.
+To publish a beta release from this repository, create and push a tag such as `beta1.6`.
 
 ## Documentation Update Checklist
 
@@ -128,8 +128,8 @@ For version-by-version notes, prefer GitHub Release notes.
 To make the workflow work to cerate the installers
 Push the tag first (from local):
 ```
-git tag beta1.4
-git push origin beta1.4
+git tag beta1.5
+git push origin beta1.5
 ```
 
 ✓ Workflow triggers, builds installers
