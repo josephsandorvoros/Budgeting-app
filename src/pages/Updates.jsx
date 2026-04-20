@@ -41,6 +41,66 @@ function compareSemver(a, b) {
   return 0;
 }
 
+function parseTagParts(tag) {
+  const text = String(tag || '').trim();
+  if (!text) return null;
+
+  const stable = text.match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/i);
+  if (stable) {
+    return { kind: 'stable', parts: [Number(stable[1]), Number(stable[2]), Number(stable[3])] };
+  }
+
+  const beta = text.match(/^beta(\d+(?:\.\d+)*)$/i);
+  if (beta) {
+    return {
+      kind: 'beta',
+      parts: String(beta[1]).split('.').map((n) => Number(n)).filter((n) => Number.isFinite(n)),
+    };
+  }
+
+  return null;
+}
+
+function compareNumericParts(a = [], b = []) {
+  const max = Math.max(a.length, b.length);
+  for (let i = 0; i < max; i += 1) {
+    const av = Number.isFinite(a[i]) ? a[i] : 0;
+    const bv = Number.isFinite(b[i]) ? b[i] : 0;
+    if (av !== bv) return av > bv ? 1 : -1;
+  }
+  return 0;
+}
+
+function compareReleaseTags(aTag, bTag) {
+  const a = parseTagParts(aTag);
+  const b = parseTagParts(bTag);
+
+  if (!a && !b) return String(aTag || '').localeCompare(String(bTag || ''));
+  if (!a) return -1;
+  if (!b) return 1;
+
+  if (a.kind !== b.kind) {
+    if (a.kind === 'stable') return 1;
+    if (b.kind === 'stable') return -1;
+  }
+
+  return compareNumericParts(a.parts, b.parts);
+}
+
+function pickLatestRelease(releases) {
+  const list = (Array.isArray(releases) ? releases : []).filter((r) => !r?.draft);
+  if (!list.length) return null;
+
+  return [...list].sort((a, b) => {
+    const byTag = compareReleaseTags(a?.tag_name, b?.tag_name);
+    if (byTag !== 0) return byTag > 0 ? -1 : 1;
+
+    const aPublished = new Date(a?.published_at || a?.created_at || 0).getTime();
+    const bPublished = new Date(b?.published_at || b?.created_at || 0).getTime();
+    return bPublished - aPublished;
+  })[0];
+}
+
 export default function Updates() {
   const [version, setVersion] = useState('unknown');
   const [platform, setPlatform] = useState('win32');
@@ -88,7 +148,7 @@ export default function Updates() {
         const res = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
         if (res.ok) {
           const releases = await res.json();
-          const release = (Array.isArray(releases) ? releases : []).find((r) => !r.draft) || null;
+          const release = pickLatestRelease(releases);
           if (!cancelled && release) setLatest(release);
         }
       } catch {
@@ -109,7 +169,7 @@ export default function Updates() {
       const res = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
       if (!res.ok) throw new Error(`GitHub API returned ${res.status}`);
       const releases = await res.json();
-      const release = (Array.isArray(releases) ? releases : []).find((r) => !r.draft) || null;
+      const release = pickLatestRelease(releases);
       if (!release) throw new Error('No published releases found yet.');
       setLatest(release);
     } catch (e) {
