@@ -3,6 +3,7 @@ import sys
 import os
 from pathlib import Path
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -37,6 +38,16 @@ app.add_middleware(
 
 
 # ── API routes ────────────────────────────────────────────────────────────────
+
+def coerce_budget_year(value: Any) -> int:
+    if value is None or value == "":
+        return datetime.now().year
+
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Budget year must be a valid number.") from exc
+
 
 @app.get("/api/has-data")
 def has_data():
@@ -82,13 +93,29 @@ def set_current(body: dict):
 
 @app.post("/api/budgets")
 def create_budget(body: dict):
-    db.create_budget(body["id"], body["name"], body["year"], body["type"], body.get("icon"), body.get("seedState"))
+    budget_id = body.get("id")
+    name = (body.get("name") or "").strip()
+    budget_type = body.get("type") or "personal"
+    year = coerce_budget_year(body.get("year"))
+
+    if not budget_id:
+        raise HTTPException(status_code=400, detail="Budget id is required.")
+    if not name:
+        raise HTTPException(status_code=400, detail="Budget name is required.")
+
+    db.create_budget(budget_id, name, year, budget_type, body.get("icon"), body.get("seedState"))
     return {"ok": True}
 
 
 @app.put("/api/budgets/{budget_id}")
 def update_budget(budget_id: str, body: dict):
-    db.update_budget_meta(budget_id, body["name"], body["year"], body.get("icon"))
+    name = (body.get("name") or "").strip()
+    year = coerce_budget_year(body.get("year"))
+
+    if not name:
+        raise HTTPException(status_code=400, detail="Budget name is required.")
+
+    db.update_budget_meta(budget_id, name, year, body.get("icon"))
     return {"ok": True}
 
 
