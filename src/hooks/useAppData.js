@@ -19,6 +19,15 @@ async function api(method, path, body) {
   return res.json();
 }
 
+function withTimeout(promise, timeoutMs, label = 'request') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+    }),
+  ]);
+}
+
 function newBudgetId() {
   return 'b' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
 }
@@ -262,10 +271,12 @@ export function useAppData() {
 
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
-    api('GET', '/has-data').then(async ({ hasData }) => {
+    withTimeout(api('GET', '/has-data'), 3000, 'has-data').then(async ({ hasData }) => {
       const [data, templateData] = await Promise.all([
-        hasData ? api('GET', '/load-all') : Promise.resolve({ currentId: null, budgets: {} }),
-        api('GET', '/templates').catch(() => ({ templates: [] })),
+        hasData
+          ? withTimeout(api('GET', '/load-all'), 6000, 'load-all')
+          : Promise.resolve({ currentId: null, budgets: {} }),
+        withTimeout(api('GET', '/templates'), 3000, 'templates').catch(() => ({ templates: [] })),
       ]);
       let templates = Array.isArray(templateData?.templates) ? templateData.templates : [];
       const builtIns = buildBuiltInTemplates();

@@ -64,6 +64,11 @@ From Settings -> Manage Data, you can use Reset All Data to completely clear bud
 
 After reset, the app starts with no budgets so users can create their own from scratch.
 
+## Recent Fixes
+
+- Improved startup responsiveness when the local backend is slow to respond by adding safe API load timeouts and local fallback behavior.
+- Fixed Annual Budget editability so budget rows can be edited based on the selected budget year (not only when that year has transactions).
+
 ## End-User Install (Windows)
 
 1. Download the latest `Budget Ledger-*-win-x64.exe` from GitHub Releases.

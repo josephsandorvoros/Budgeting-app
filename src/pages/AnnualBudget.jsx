@@ -16,21 +16,26 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
   );
   const currentType = currentBudget?.type || 'personal';
 
+  const sameTypeBudgetList = useMemo(
+    () => (budgetList || []).filter((b) => (b?.type || 'personal') === currentType),
+    [budgetList, currentType]
+  );
+
   const sameTypeBudgets = useMemo(
     () => Object.entries(allBudgets || {}).filter(([, budgetData]) => (budgetData?.type || 'personal') === currentType),
     [allBudgets, currentType]
   );
 
   const yearsWithData = useMemo(() => {
-    const years = sameTypeBudgets.flatMap(([, budgetData]) =>
-      (budgetData?.transactions || [])
-        .map((t) => new Date(t.date).getFullYear())
-        .filter(Number.isFinite)
-    );
+    const years = sameTypeBudgetList
+      .map((b) => Number(b?.year))
+      .filter(Number.isFinite);
     return Array.from(new Set(years)).sort((a, b) => b - a);
-  }, [sameTypeBudgets]);
+  }, [sameTypeBudgetList]);
 
-  const defaultYear = yearsWithData[0] || currentYear;
+  const defaultYear = Number.isFinite(Number(currentBudget?.year))
+    ? Number(currentBudget.year)
+    : (yearsWithData[0] || currentYear);
   const [selectedYear, setSelectedYear] = useState(defaultYear);
 
   useEffect(() => {
@@ -46,18 +51,14 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
   const handleYearChange = (nextYear) => {
     const y = Number(nextYear);
     setSelectedYear(y);
-    const target = sameTypeBudgets
-      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === y))?.[0];
+    const target = sameTypeBudgetList.find((b) => Number(b?.year) === y)?.id;
     if (target && target !== currentId) onSwitchBudget(target);
   };
 
   const activeBudgetMeta = useMemo(() => {
-    if ((data.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(selectedYear))) return currentBudget;
-    const match = sameTypeBudgets
-      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(selectedYear)));
-    if (!match) return null;
-    return budgetList.find((b) => b.id === match[0]) || null;
-  }, [data.transactions, currentBudget, sameTypeBudgets, selectedYear, budgetList]);
+    if (Number(currentBudget?.year) === Number(selectedYear)) return currentBudget;
+    return sameTypeBudgetList.find((b) => Number(b?.year) === Number(selectedYear)) || null;
+  }, [currentBudget, sameTypeBudgetList, selectedYear]);
 
   const emptyData = useMemo(() => {
     const sourceCategories = data.categories || {};
