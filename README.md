@@ -90,8 +90,8 @@ For more details on code signing, see the [License](#license) section.
 ## Latest Downloads
 
 - Release page: https://github.com/josephsandorvoros/Budgeting-app/releases
-- Beta 1.8 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.8
-- Beta 1.8 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.8/Budget.Ledger-1.0.1-win-x64.exe
+- Latest release page: https://github.com/josephsandorvoros/Budgeting-app/releases/latest
+- Latest workflow run (installer builds): https://github.com/josephsandorvoros/Budgeting-app/actions/workflows/build-installers.yml
 
 ## In-App Updates
 
@@ -112,6 +112,7 @@ Native multi-platform installer builds are configured in:
 Use that workflow to generate Windows, macOS, and Linux artifacts from one repository push.
 
 To publish a beta release from this repository, create and push a tag such as `beta1.8`.
+The workflow will automatically build installers and publish/update the GitHub Release for that tag.
 
 ## Documentation Update Checklist
 
@@ -130,8 +131,7 @@ Usually skip README edits for:
 
 For version-by-version notes, prefer GitHub Release notes.
 
-To make the workflow work to cerate the installers
-Push the tag first (from local):
+To trigger automated installer + release publishing, push the tag from local:
 
 Note:
     Bump package.json version for every release you publish.
@@ -146,14 +146,7 @@ git tag beta1.8
 git push origin beta1.8
 ```
 
-✓ Workflow triggers, builds installers
-
-Then create the release on GitHub pointing to that tag:
-
-Go to Releases → "Draft a new release"
-Click "Choose a tag" → select the tag you just pushed
-Add release notes
-Publish
+✓ Workflow triggers, builds installers, and publishes the release automatically
 
 ## License
 
