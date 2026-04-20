@@ -90,8 +90,8 @@ For more details on code signing, see the [License](#license) section.
 ## Latest Downloads
 
 - Release page: https://github.com/josephsandorvoros/Budgeting-app/releases
-- Beta 1.7 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.7
-- Beta 1.7 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.7/Budget.Ledger-1.0.1-win-x64.exe
+- Beta 1.8 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.8
+- Beta 1.8 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.8/Budget.Ledger-1.0.1-win-x64.exe
 
 ## In-App Updates
 
@@ -135,15 +135,15 @@ Push the tag first (from local):
 
 Note:
     Bump package.json version for every release you publish.
-    Keep using beta tags for release channels (beta1.7, beta1.8, etc.).
+    Keep using beta tags for release channels (beta1.8, beta1.9, etc.).
     Use semantic versions like:
     1.0.1 for fixes
     1.1.0 for features
     2.0.0 for breaking changes
 
 ```
-git tag beta1.7
-git push origin beta1.7
+git tag beta1.8
+git push origin beta1.8
 ```
 
 ✓ Workflow triggers, builds installers
