@@ -223,10 +223,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("BUDGET_PORT", 8765))
     host = os.environ.get("BUDGET_HOST", "127.0.0.1")
 
-    if IS_BUNDLE:
-        # Open browser automatically when running as packaged app
-        import threading
-        import webbrowser
-        threading.Timer(1.5, lambda: webbrowser.open(f"http://{host}:{port}")).start()
-
     uvicorn.run(app, host=host, port=port, log_level="warning")
