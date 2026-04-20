@@ -177,7 +177,7 @@ const SECTIONS = [
       },
       {
         q: 'Custom icons',
-        a: 'When adding or editing a category you can pick from the full emoji library, browse by group, search by name or keyword, or upload/paste a custom icon image.',
+        a: 'When adding or editing a category you can pick from the full emoji library, browse by group, search by name or keyword, or upload/paste a custom icon image. Favicons are supported for custom icons — just paste the URL of any image (typically base website url and favicon.ico i.e. https://google.com/favicon.ico)and it will be resized and cropped to fit. Custom icons are saved to the backend so they persist across browser clears and reinstalls.',
       },
     ],
   },
