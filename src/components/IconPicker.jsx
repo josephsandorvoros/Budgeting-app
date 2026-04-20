@@ -73,6 +73,15 @@ function normalizeCustomIconValue(value) {
   return String(value || '').trim();
 }
 
+function customKeywordsForValue(value) {
+  const text = normalizeCustomIconValue(value);
+  if (!text) return ['custom', 'user', 'personal'];
+  if (/^[A-Z][A-Za-z0-9]+$/.test(text)) {
+    return ['custom', 'user', 'personal', 'library', 'react-icons', ...tokenizeLabel(text)];
+  }
+  return ['custom', 'user', 'personal'];
+}
+
 export default function IconPicker({
   value,
   onChange,
@@ -92,7 +101,7 @@ export default function IconPicker({
   const [customLoaded, setCustomLoaded] = useState(false);
 
   const customEntries = useMemo(
-    () => customIcons.map((emoji) => ({ emoji, keywords: ['custom', 'user', 'personal'] })),
+    () => customIcons.map((emoji) => ({ emoji, keywords: customKeywordsForValue(emoji) })),
     [customIcons],
   );
 
@@ -288,7 +297,7 @@ export default function IconPicker({
           value={customDraft}
           onChange={(e) => setCustomDraft(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addCustomIcon()}
-          placeholder="Add your own icon: emoji, symbol, SVG markup, or image/data URL"
+          placeholder="Add your own icon: emoji, symbol, FaWallet, RiBankCardFill, SVG markup, or image/data URL"
         />
         <button type="button" className="icon-picker-custom-btn" onClick={addCustomIcon}>Add Custom</button>
         <label className="icon-picker-upload-btn">
@@ -339,7 +348,7 @@ export default function IconPicker({
                 type="button"
                 className="icon-picker-select"
                 onClick={() => selectIcon(item.emoji)}
-                title={`Pick ${item.emoji}`}
+                title={String(item.emoji || '').length < 80 ? `Pick ${item.emoji}` : 'Pick icon'}
               >
                 <AppIcon value={item.emoji} fallback="🏷️" className="icon-picker-glyph" label="picker icon" />
               </button>
