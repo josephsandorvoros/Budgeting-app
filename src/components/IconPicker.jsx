@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import EmojiPicker from 'emoji-picker-react';
 import { loadAppSetting, saveAppSetting } from '../utils/appSettings.js';
+import AppIcon from './AppIcon.jsx';
 
 const EXTRA_KEYWORDS = {
   '🐶': ['dog', 'puppy', 'pet'],
@@ -66,6 +67,10 @@ function normalizeIconData(options = [], groups = {}) {
   });
 
   return Array.from(map.values());
+}
+
+function normalizeCustomIconValue(value) {
+  return String(value || '').trim();
 }
 
 export default function IconPicker({
@@ -208,13 +213,39 @@ export default function IconPicker({
   };
 
   const addCustomIcon = () => {
-    const icon = customDraft.trim();
+    const icon = normalizeCustomIconValue(customDraft);
     if (!icon) return;
     setCustomIcons((prev) => {
       if (prev.includes(icon)) return prev;
       return [icon, ...prev].slice(0, 100);
     });
     setCustomDraft('');
+    selectIcon(icon);
+    setTab('All');
+  };
+
+  const handleCustomFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const contents = await file.text();
+    const normalized = file.type === 'image/svg+xml'
+      ? contents.trim()
+      : await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+          reader.readAsDataURL(file);
+        });
+
+    const icon = normalizeCustomIconValue(normalized);
+    if (!icon) return;
+
+    setCustomIcons((prev) => {
+      if (prev.includes(icon)) return prev;
+      return [icon, ...prev].slice(0, 100);
+    });
     selectIcon(icon);
     setTab('All');
   };
@@ -252,15 +283,18 @@ export default function IconPicker({
       </div>
 
       <div className="icon-picker-custom-row">
-        <input
-          type="text"
+        <textarea
           className="icon-picker-custom-input"
           value={customDraft}
           onChange={(e) => setCustomDraft(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addCustomIcon()}
-          placeholder="Add your own icon (emoji or symbol)"
+          placeholder="Add your own icon: emoji, symbol, SVG markup, or image/data URL"
         />
         <button type="button" className="icon-picker-custom-btn" onClick={addCustomIcon}>Add Custom</button>
+        <label className="icon-picker-upload-btn">
+          Upload SVG/Image
+          <input type="file" accept=".svg,image/*" onChange={handleCustomFile} hidden />
+        </label>
       </div>
 
       {showFullLibrary && (
@@ -307,7 +341,7 @@ export default function IconPicker({
                 onClick={() => selectIcon(item.emoji)}
                 title={`Pick ${item.emoji}`}
               >
-                {item.emoji}
+                <AppIcon value={item.emoji} fallback="🏷️" className="icon-picker-glyph" label="picker icon" />
               </button>
               {customIcons.includes(item.emoji) && (
                 <button

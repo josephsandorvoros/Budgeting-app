@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import IconPicker from '../components/IconPicker.jsx';
+import AppIcon from '../components/AppIcon.jsx';
 import { loadAppSetting, saveAppSetting } from '../utils/appSettings.js';
 
 const GROUPS = ['Income', 'Expenses', 'Savings', 'Debt'];
@@ -296,7 +297,12 @@ export default function Categories({
               <div key={cat} className="sca-item-row">
                 <div className="sca-item-main">
                   <span className="sca-grip">⋮⋮</span>
-                  <span>{catMeta[catKey(major, cat)]?.emoji || defaultEmoji(major)}</span>
+                  <AppIcon
+                    value={catMeta[catKey(major, cat)]?.emoji || defaultEmoji(major)}
+                    fallback={defaultEmoji(major)}
+                    className="sca-item-icon"
+                    label="category icon"
+                  />
                   <div>
                     <div>{cat}</div>
                     <div className="sca-subtext">{catMeta[catKey(major, cat)]?.description || ''}</div>

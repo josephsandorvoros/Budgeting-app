@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ACCOUNT_HIERARCHY } from '../data/defaults.js';
 import IconPicker from '../components/IconPicker.jsx';
+import AppIcon from '../components/AppIcon.jsx';
 import { loadAppSetting, saveAppSetting } from '../utils/appSettings.js';
 
 const blank = {
@@ -294,7 +295,7 @@ export default function SettingsAccounts({
                 <div key={acc.id} className="sca-item-row">
                   <div className="sca-item-main">
                     <span className="sca-grip">⋮⋮</span>
-                    <span>{acc.icon || '🏦'}</span>
+                    <AppIcon value={acc.icon || '🏦'} fallback="🏦" className="sca-item-icon" label="account icon" />
                     <div>
                       <div>{acc.name}</div>
                       <div className="sca-subtext">{meta.description || `Starting balance ${Number(acc.startBalance || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}</div>

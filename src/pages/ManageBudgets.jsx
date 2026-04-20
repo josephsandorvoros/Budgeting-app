@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import IconPicker from '../components/IconPicker.jsx';
+import AppIcon from '../components/AppIcon.jsx';
 
 const BUDGET_ICON_GROUPS = {
   Finance: ['💰', '📈', '📉', '📊', '💵', '💳', '🏦', '🪙', '💼', '🧾'],
@@ -54,7 +55,9 @@ function BudgetCard({ b, isActive, budgetData, onSwitch, onRename, onDuplicate, 
     <div className={`mb-scenario-card${isActive ? ' mb-scenario-active' : ''}`}>
       {editing ? (
         <div className="mb-edit-row">
-          <div className="mb-budget-icon-preview">{editIcon || '📈'}</div>
+          <div className="mb-budget-icon-preview">
+            <AppIcon value={editIcon} fallback="📈" className="mb-budget-icon-render" label="budget icon" />
+          </div>
           <input
             className="mb-edit-input"
             value={editName}
@@ -85,7 +88,7 @@ function BudgetCard({ b, isActive, budgetData, onSwitch, onRename, onDuplicate, 
       ) : (
         <>
           <div className="mb-scenario-left">
-            <div className="mb-scenario-name"><span className="mb-budget-icon">{b.icon || (b.type === 'business' ? '💼' : '📈')}</span> {b.name}</div>
+            <div className="mb-scenario-name"><AppIcon value={b.icon || (b.type === 'business' ? '💼' : '📈')} fallback={b.type === 'business' ? '💼' : '📈'} className="mb-budget-icon" label="budget icon" /> {b.name}</div>
             <div className="mb-scenario-meta">Modified recently</div>
           </div>
 
