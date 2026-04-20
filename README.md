@@ -4,7 +4,7 @@
 [![Installers](https://github.com/josephsandorvoros/Budgeting-app/actions/workflows/build-installers.yml/badge.svg)](https://github.com/josephsandorvoros/Budgeting-app/actions/workflows/build-installers.yml)
 [![Latest Tag](https://img.shields.io/github/v/tag/josephsandorvoros/Budgeting-app?label=latest%20tag)](https://github.com/josephsandorvoros/Budgeting-app/releases)
 
-This is a beta app and a proof of concept for me. I set out to make an app I could use, but also something I could give to others. Partially to show I could do it, partially to write up a blog post about it, partially to add it to my portfolio and learn from it. It a local-first desktop budgeting app with personal and business budget workflows, annual and monthly planning, transaction management, recurring bills, balance sheet tracking, data import/export, and reusable templates. It was made with AI assistance (Github CoPilot); I want to be clear and upfront about that. It may have updates, but it may not also, I don't plan on this becoming anything other than a side project.
+This is a beta app and a proof of concept for me. I set out to make an app I could use, but also something I could give to others. Partially to show I could do it, partially to write up a blog post about it, partially to add it to my portfolio and learn from it. It a local-first desktop budgeting app with personal and business budget workflows, annual and monthly planning, transaction management, recurring bills, balance sheet tracking, data import/export, and reusable templates. It was made with AI assistance (Github CoPilot); I want to be clear and upfront about that. It may have updates, but it may not also, I don't plan on this becoming anything other than a side project. As an additional note, I am working and pushing to check in real world install so for now this likely has lots of little tweaks and frequent updates.
 
 ## Stack
 
@@ -142,8 +142,8 @@ Note:
     2.0.0 for breaking changes
 
 ```
-git tag beta1.9
-git push origin beta1.9
+git tag beta1.10
+git push origin beta1.10
 ```
 
 ✓ Workflow triggers, builds installers, and publishes the release automatically
