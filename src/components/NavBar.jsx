@@ -17,7 +17,7 @@ const SETTINGS_ITEMS = [
   { id: 'about', label: 'About', icon: 'ℹ️' },
 ];
 
-const FEEDBACK_EMAIL = 'support@budgetledger.app';
+const FEEDBACK_EMAIL = 'support.budgetledger.app@hybridcloudhq.com';
 
 function NewBudgetForm({ onSubmit, onCancel }) {
   const [name, setName] = useState('');
