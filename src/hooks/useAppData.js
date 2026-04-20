@@ -176,13 +176,27 @@ function buildBuiltInTemplates() {
   return [buildDefaultTemplate(), buildYoungProfessionalTemplate(), buildSideHustleTemplate()];
 }
 
+function emptyBudgetData() {
+  const categories = Object.fromEntries(
+    Object.keys(DEFAULT_DATA.categories || {}).map((group) => [group, []])
+  );
+  const budget = Object.fromEntries(
+    Object.keys(DEFAULT_DATA.budget || {}).map((group) => [group, {}])
+  );
+
+  return {
+    categories,
+    budget,
+    transactions: [],
+    accounts: [],
+    bills: [],
+  };
+}
+
 function blankBudget(name, year, type = 'personal') {
-  const d = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  const d = emptyBudgetData();
   return {
     name, year, type, icon: defaultBudgetIcon(type), ...d,
-    transactions: [],
-    accounts: JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS)),
-    bills: JSON.parse(JSON.stringify(DEFAULT_BILLS)),
   };
 }
 
@@ -316,10 +330,10 @@ export function useAppData() {
       year: finalYear,
       type: finalType,
       icon: icon || source.icon || defaultBudgetIcon(finalType),
-      categories: source.categories || JSON.parse(JSON.stringify(DEFAULT_DATA.categories)),
-      budget: source.budget || JSON.parse(JSON.stringify(DEFAULT_DATA.budget)),
-      accounts: source.accounts || JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS)),
-      bills: source.bills || JSON.parse(JSON.stringify(DEFAULT_BILLS)),
+      categories: source.categories || emptyBudgetData().categories,
+      budget: source.budget || emptyBudgetData().budget,
+      accounts: source.accounts || [],
+      bills: source.bills || [],
       transactions: source.transactions || [],
     };
     setState(prev => ({
@@ -379,9 +393,7 @@ export function useAppData() {
       const remaining = Object.fromEntries(Object.entries(prev.budgets).filter(([k]) => k !== id));
       const ids = Object.keys(remaining);
       if (ids.length === 0) {
-        const newId = newBudgetId();
-        remaining[newId] = blankBudget('My Budget', new Date().getFullYear(), 'personal');
-        return { currentId: newId, budgets: remaining, loading: false };
+        return { ...prev, currentId: null, budgets: remaining, loading: false };
       }
       return { ...prev, currentId: prev.currentId === id ? ids[0] : prev.currentId, budgets: remaining };
     });
