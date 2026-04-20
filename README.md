@@ -65,8 +65,8 @@ No extra runtime or dependency installation is required.
 ## Latest Downloads
 
 - Release page: https://github.com/josephsandorvoros/Budgeting-app/releases
-- Beta 1.2 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.2
-- Beta 1.2 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.2/Budget.Ledger-1.0.0-win-x64.exe
+- Beta 1.3 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.3
+- Beta 1.3 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.3/Budget.Ledger-1.0.0-win-x64.exe
 
 ## CI Installers
 
