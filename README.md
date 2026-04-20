@@ -62,6 +62,16 @@ Artifacts are written to the release folder.
 
 No extra runtime or dependency installation is required.
 
+### Windows SmartScreen Warning
+
+When running the installer for the first time on Windows, you may see a SmartScreen warning that says "Windows protected your PC". This is normal for unsigned applications and does **not** indicate a security risk. The app is safe to run. All the code is here to see.
+
+To proceed:
+- Click "More info"
+- Click "Run anyway"
+
+For more details on code signing, see the [License](#license) section.
+
 ## Latest Downloads
 
 - Release page: https://github.com/josephsandorvoros/Budgeting-app/releases
@@ -110,6 +120,10 @@ Go to Releases → "Draft a new release"
 Click "Choose a tag" → select the tag you just pushed
 Add release notes
 Publish
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ## Notes
 
