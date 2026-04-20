@@ -127,6 +127,15 @@ For version-by-version notes, prefer GitHub Release notes.
 
 To make the workflow work to cerate the installers
 Push the tag first (from local):
+
+Note:
+    Bump package.json version for every release you publish.
+    Keep using beta tags for release channels (beta1.5, beta1.6, etc.).
+    Use semantic versions like:
+    1.0.1 for fixes
+    1.1.0 for features
+    2.0.0 for breaking changes
+
 ```
 git tag beta1.5
 git push origin beta1.5
