@@ -3,9 +3,14 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const { spawn } = require('child_process');
 const db = require('./database.cjs');
 
 const isDev = process.env.NODE_ENV === 'development';
+const BACKEND_HOST = process.env.BUDGET_HOST || '127.0.0.1';
+const BACKEND_PORT = Number(process.env.BUDGET_PORT || 8765);
+let backendProcess = null;
 
 // Ensure Electron uses app-owned writable cache/session directories.
 try {
@@ -27,6 +32,91 @@ try {
 function sendWindowState(win) {
   if (!win || win.isDestroyed()) return;
   win.webContents.send('window:maximized-changed', win.isMaximized());
+}
+
+function backendHealthcheck() {
+  return new Promise((resolve) => {
+    const req = http.get(
+      {
+        hostname: BACKEND_HOST,
+        port: BACKEND_PORT,
+        path: '/api/has-data',
+        timeout: 1500,
+      },
+      (res) => {
+        resolve(res.statusCode >= 200 && res.statusCode < 500);
+      }
+    );
+
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+async function waitForBackendReady(timeoutMs = 30000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (await backendHealthcheck()) return true;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return false;
+}
+
+function getBackendCommand() {
+  if (isDev) {
+    return {
+      command: process.env.BUDGET_PYTHON || 'python',
+      args: [path.join(__dirname, '..', 'backend', 'main.py')],
+    };
+  }
+
+  const exeName = process.platform === 'win32' ? 'budget-ledger-backend.exe' : 'budget-ledger-backend';
+  const packagedPath = path.join(process.resourcesPath, 'backend', exeName);
+  return {
+    command: packagedPath,
+    args: [],
+  };
+}
+
+async function startBackend() {
+  if (backendProcess) return true;
+
+  const { command, args } = getBackendCommand();
+  if (!isDev && !fs.existsSync(command)) {
+    console.error('Bundled backend executable not found at', command);
+    return false;
+  }
+
+  const env = {
+    ...process.env,
+    BUDGET_HOST: BACKEND_HOST,
+    BUDGET_PORT: String(BACKEND_PORT),
+    BUDGET_DATA_DIR: app.getPath('userData'),
+  };
+
+  backendProcess = spawn(command, args, {
+    env,
+    windowsHide: true,
+    stdio: isDev ? 'inherit' : 'ignore',
+  });
+
+  backendProcess.once('exit', () => {
+    backendProcess = null;
+  });
+
+  return waitForBackendReady();
+}
+
+function stopBackend() {
+  if (!backendProcess || backendProcess.killed) return;
+  try {
+    backendProcess.kill();
+  } catch {
+    // ignore shutdown errors
+  }
 }
 
 function createWindow() {
@@ -88,8 +178,14 @@ function createWindow() {
   win.on('leave-full-screen', () => sendWindowState(win));
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   db.initDatabase(app);
+
+  try {
+    await startBackend();
+  } catch (err) {
+    console.error('Failed to start backend API', err);
+  }
 
   ipcMain.handle('db:hasData',              (_e, ...a) => db.hasData(...a));
   ipcMain.handle('db:importAllData',        (_e, ...a) => db.importAllData(...a));
@@ -138,5 +234,10 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  stopBackend();
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  stopBackend();
 });

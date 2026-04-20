@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { DEFAULT_DATA, DEFAULT_ACCOUNTS, DEFAULT_BILLS } from '../data/defaults.js';
 
 const STORAGE_KEY = 'budget_app_v6';
-const API_BASE = '/api';
+const API_BASE = (typeof window !== 'undefined' && window.electronAPI)
+  ? 'http://127.0.0.1:8765/api'
+  : '/api';
 const DEFAULT_TEMPLATE_ID = 'tpl_builtin_comprehensive';
 const YP_TEMPLATE_ID = 'tpl_builtin_young_professional';
 const BIZ_TEMPLATE_ID = 'tpl_builtin_side_hustle';
@@ -16,8 +18,6 @@ async function api(method, path, body) {
   if (!res.ok) throw new Error(`API ${method} ${path} → ${res.status}`);
   return res.json();
 }
-
-const isBackend = true; // Python FastAPI backend is always available
 
 function newBudgetId() {
   return 'b' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
@@ -209,7 +209,7 @@ function loadLocalState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.budgets && parsed.currentId) {
+      if (parsed.budgets && typeof parsed.budgets === 'object') {
         Object.values(parsed.budgets).forEach(b => {
           if (!b.type) b.type = 'personal';
           if (!b.icon) b.icon = defaultBudgetIcon(b.type);
@@ -217,21 +217,27 @@ function loadLocalState() {
           if (!b.bills)    b.bills    = JSON.parse(JSON.stringify(DEFAULT_BILLS));
         });
         if (!Array.isArray(parsed.templates)) parsed.templates = buildBuiltInTemplates();
+        if (!parsed.currentId || !parsed.budgets[parsed.currentId]) {
+          parsed.currentId = Object.keys(parsed.budgets)[0] || null;
+        }
         return parsed;
       }
     }
     const v5raw = localStorage.getItem('budget_app_v5');
-    const id = newBudgetId();
-    const budgetData = deepMerge(
-      { name: 'My Budget', year: 2025, type: 'personal', icon: defaultBudgetIcon('personal'), ...DEFAULT_DATA },
-      v5raw ? { name: 'My Budget', year: 2025, type: 'personal', icon: defaultBudgetIcon('personal'), ...JSON.parse(v5raw) } : null
-    );
-    return { currentId: id, budgets: { [id]: budgetData }, templates: buildBuiltInTemplates() };
+    if (v5raw) {
+      const id = newBudgetId();
+      const budgetData = deepMerge(
+        { name: 'My Budget', year: 2025, type: 'personal', icon: defaultBudgetIcon('personal'), ...DEFAULT_DATA },
+        { name: 'My Budget', year: 2025, type: 'personal', icon: defaultBudgetIcon('personal'), ...JSON.parse(v5raw) }
+      );
+      return { currentId: id, budgets: { [id]: budgetData }, templates: buildBuiltInTemplates() };
+    }
+
+    return { currentId: null, budgets: {}, templates: buildBuiltInTemplates() };
   } catch {
-    const id = newBudgetId();
     return {
-      currentId: id,
-      budgets: { [id]: { name: 'My Budget', year: 2025, type: 'personal', icon: defaultBudgetIcon('personal'), ...JSON.parse(JSON.stringify(DEFAULT_DATA)) } },
+      currentId: null,
+      budgets: {},
       templates: buildBuiltInTemplates(),
     };
   }
@@ -243,12 +249,8 @@ export function useAppData() {
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
     api('GET', '/has-data').then(async ({ hasData }) => {
-      if (!hasData) {
-        const localState = loadLocalState();
-        await api('POST', '/import-all', localState);
-      }
       const [data, templateData] = await Promise.all([
-        api('GET', '/load-all'),
+        hasData ? api('GET', '/load-all') : Promise.resolve({ currentId: null, budgets: {} }),
         api('GET', '/templates').catch(() => ({ templates: [] })),
       ]);
       let templates = Array.isArray(templateData?.templates) ? templateData.templates : [];
@@ -268,7 +270,9 @@ export function useAppData() {
       if (!templates.length) {
         templates = builtIns;
       }
-      const base = Object.keys(data).length ? data : loadLocalState();
+      const base = (data && typeof data === 'object' && data.budgets)
+        ? data
+        : { currentId: null, budgets: {} };
       setState({ ...base, templates, loading: false });
     }).catch(err => {
       console.error('Backend API error, falling back to localStorage', err);
@@ -321,6 +325,7 @@ export function useAppData() {
     setState(prev => ({
       currentId: id,
       budgets: { ...prev.budgets, [id]: blank },
+      templates: prev.templates || buildBuiltInTemplates(),
       loading: false,
     }));
     api('POST', '/budgets', { id, name, year: finalYear, type: finalType, icon: blank.icon, seedState: {
@@ -681,11 +686,9 @@ export function useAppData() {
   }, []);
 
   const resetAllData = useCallback(async ({ keepTemplates = true } = {}) => {
-    const nextId = newBudgetId();
-    const previewBudget = blankBudget('My Budget', new Date().getFullYear(), 'personal');
     const statePayload = {
-      currentId: nextId,
-      budgets: { [nextId]: previewBudget },
+      currentId: null,
+      budgets: {},
     };
 
     setState(prev => {
@@ -694,8 +697,8 @@ export function useAppData() {
         : [];
       const mergedTemplates = [...buildBuiltInTemplates(), ...customTemplates];
       return {
-        currentId: nextId,
-        budgets: { [nextId]: JSON.parse(JSON.stringify(previewBudget)) },
+        currentId: null,
+        budgets: {},
         templates: mergedTemplates,
         loading: false,
       };
@@ -712,7 +715,11 @@ export function useAppData() {
     try {
       await api('POST', '/reset-all', { state: statePayload, keepTemplates });
     } catch {
-      await api('POST', '/import-all', statePayload);
+      try {
+        await api('POST', '/import-all', statePayload);
+      } catch {
+        // Keep local reset state when backend APIs are not reachable.
+      }
     }
   }, []);
 

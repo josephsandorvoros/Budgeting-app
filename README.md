@@ -39,6 +39,7 @@ npm run build
 ## Desktop Installers
 
 End users do not need to install Node, Python, or any dependencies. The installer bundles everything needed to run the app.
+The desktop build also bundles the local FastAPI backend executable and launches it automatically at app startup.
 
 Windows installer (.exe):
 
@@ -56,12 +57,12 @@ Artifacts are written to the release folder.
 
 ## Data Reset (Preview Mode)
 
-From Settings -> Manage Data, you can use Reset All Data to replace all budgets and records with preview defaults.
+From Settings -> Manage Data, you can use Reset All Data to completely clear budget data.
 
 - Option A: keep custom templates
 - Option B: reset templates back to built-in only
 
-Use this before shipping demo/preview builds when you want a clean starter state.
+After reset, the app starts with no budgets so users can create their own from scratch.
 
 ## End-User Install (Windows)
 

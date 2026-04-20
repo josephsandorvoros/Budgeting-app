@@ -127,6 +127,37 @@ export default function App() {
   }, [isElectron]);
 
   if (loading || !data) {
+    if (!loading && !data) {
+      return (
+        <div className={`app-shell${isWindowMaximized ? ' app-shell-maximized' : ''}`}>
+          <DesktopTitleBar isMaximized={isWindowMaximized} onMaximizedChange={setIsWindowMaximized} />
+          <div className="app-layout">
+            <NavBar
+              page={page}
+              setPage={navigate}
+              budgetList={budgetList}
+              currentId={currentId}
+              onSwitchBudget={switchBudget}
+              onCreateBudget={createBudget}
+              onManageBudgets={() => navigate('manage')}
+              onHelp={() => navigate('help')}
+            />
+            <main className="main-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+              <div className="card" style={{ maxWidth: 680, width: '100%', textAlign: 'center', display: 'grid', gap: 12 }}>
+                <div style={{ fontSize: 44 }}>📒</div>
+                <h2 style={{ margin: 0 }}>No Budget Data Yet</h2>
+                <div className="subtitle">Create your first budget or apply a template from Settings → Templates.</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="btn-primary" onClick={() => createBudget('My Budget', new Date().getFullYear(), 'personal')}>Create Personal Budget</button>
+                  <button className="btn-ghost" onClick={() => createBudget('Business Budget', new Date().getFullYear(), 'business')}>Create Business Budget</button>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
         <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>

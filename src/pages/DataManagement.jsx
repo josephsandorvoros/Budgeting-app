@@ -172,7 +172,7 @@ export default function DataManagement({ data, exportAllData, importAllData, imp
     if (typeof resetAllData !== 'function') return;
 
     const shouldContinue = window.confirm(
-      'This will replace all budgets, transactions, accounts, bills, and settings with preview defaults. Continue?'
+      'This will permanently delete all budgets, transactions, accounts, bills, and settings, leaving the app empty. Continue?'
     );
     if (!shouldContinue) return;
 
@@ -183,8 +183,8 @@ export default function DataManagement({ data, exportAllData, importAllData, imp
       await resetAllData({ keepTemplates: keepTemplatesOnReset });
       setMsg(
         keepTemplatesOnReset
-          ? 'All data reset to preview defaults. Custom templates were kept.'
-          : 'All data reset to preview defaults. Templates were reset to built-in defaults only.'
+          ? 'All data was cleared. Custom templates were kept.'
+          : 'All data was cleared. Templates were reset to built-in defaults only.'
       );
     } catch (error) {
       setErr(error.message || 'Failed to reset all data.');
@@ -229,7 +229,7 @@ export default function DataManagement({ data, exportAllData, importAllData, imp
       <div className="card" style={{ maxWidth: 760, display: 'grid', gap: 12 }}>
         <div style={{ fontWeight: 700, color: 'var(--text)' }}>Reset All Data</div>
         <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-          Replaces all budgets and records with preview defaults. Use this when preparing a clean demo state.
+          Permanently clears budgets and records so the app has no budget data.
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)' }}>
           <input

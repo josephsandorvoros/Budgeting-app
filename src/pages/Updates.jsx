@@ -25,12 +25,44 @@ function pickInstallerAsset(release, platform) {
   return assets.find((a) => String(a.name || '').toLowerCase().endsWith('.exe')) || null;
 }
 
+function parseSemver(version) {
+  const match = String(version || '').match(/(\d+)\.(\d+)\.(\d+)/);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function compareSemver(a, b) {
+  const av = parseSemver(a);
+  const bv = parseSemver(b);
+  if (!av || !bv) return null;
+  if (av[0] !== bv[0]) return av[0] > bv[0] ? 1 : -1;
+  if (av[1] !== bv[1]) return av[1] > bv[1] ? 1 : -1;
+  if (av[2] !== bv[2]) return av[2] > bv[2] ? 1 : -1;
+  return 0;
+}
+
 export default function Updates() {
   const [version, setVersion] = useState('unknown');
   const [platform, setPlatform] = useState('win32');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [latest, setLatest] = useState(null);
+
+  const installerAsset = useMemo(() => pickInstallerAsset(latest, platform), [latest, platform]);
+
+  const latestInstallerVersion = useMemo(() => {
+    if (!installerAsset?.name) return null;
+    const match = String(installerAsset.name).match(/Budget\.Ledger-(\d+\.\d+\.\d+)/i);
+    return match ? match[1] : null;
+  }, [installerAsset]);
+
+  const statusText = useMemo(() => {
+    const cmp = compareSemver(version, latestInstallerVersion);
+    if (cmp === null) return 'Unknown';
+    if (cmp === 0) return 'Up to date';
+    if (cmp < 0) return 'Update available';
+    return 'Running newer local build';
+  }, [version, latestInstallerVersion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +83,17 @@ export default function Updates() {
       } catch {
         // keep fallback
       }
+
+      try {
+        const res = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
+        if (res.ok) {
+          const releases = await res.json();
+          const release = (Array.isArray(releases) ? releases : []).find((r) => !r.draft) || null;
+          if (!cancelled && release) setLatest(release);
+        }
+      } catch {
+        // initial release lookup is optional
+      }
     };
 
     loadEnv();
@@ -58,8 +101,6 @@ export default function Updates() {
       cancelled = true;
     };
   }, []);
-
-  const installerAsset = useMemo(() => pickInstallerAsset(latest, platform), [latest, platform]);
 
   const checkForUpdates = async () => {
     setBusy(true);
@@ -94,12 +135,16 @@ export default function Updates() {
 
       <div className="card" style={{ maxWidth: 760, display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: 8, columnGap: 12 }}>
-          <div style={{ color: 'var(--muted)' }}>Current version</div>
+          <div style={{ color: 'var(--muted)' }}>Installed version</div>
           <div style={{ color: 'var(--text)', fontWeight: 700 }}>{version}</div>
           <div style={{ color: 'var(--muted)' }}>Platform</div>
           <div style={{ color: 'var(--text)' }}>{platform}</div>
           <div style={{ color: 'var(--muted)' }}>Latest release</div>
           <div style={{ color: 'var(--text)' }}>{latest?.tag_name || 'Not checked yet'}</div>
+          <div style={{ color: 'var(--muted)' }}>Latest installer version</div>
+          <div style={{ color: 'var(--text)' }}>{latestInstallerVersion || 'Unknown'}</div>
+          <div style={{ color: 'var(--muted)' }}>Status</div>
+          <div style={{ color: 'var(--text)' }}>{statusText}</div>
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
