@@ -127,6 +127,8 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('window:close',            (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle('window:isMaximized',      (event) => BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false);
+  ipcMain.handle('app:getVersion',          () => app.getVersion());
+  ipcMain.handle('app:getPlatform',         () => process.platform);
 
   createWindow();
 

@@ -680,6 +680,42 @@ export function useAppData() {
     await api('POST', '/import-all', sanitized);
   }, []);
 
+  const resetAllData = useCallback(async ({ keepTemplates = true } = {}) => {
+    const nextId = newBudgetId();
+    const previewBudget = blankBudget('My Budget', new Date().getFullYear(), 'personal');
+    const statePayload = {
+      currentId: nextId,
+      budgets: { [nextId]: previewBudget },
+    };
+
+    setState(prev => {
+      const customTemplates = keepTemplates
+        ? (prev.templates || []).filter(t => t && !t.builtIn)
+        : [];
+      const mergedTemplates = [...buildBuiltInTemplates(), ...customTemplates];
+      return {
+        currentId: nextId,
+        budgets: { [nextId]: JSON.parse(JSON.stringify(previewBudget)) },
+        templates: mergedTemplates,
+        loading: false,
+      };
+    });
+
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key !== STORAGE_KEY) localStorage.removeItem(key);
+      });
+    } catch {
+      // ignore local storage cleanup failures
+    }
+
+    try {
+      await api('POST', '/reset-all', { state: statePayload, keepTemplates });
+    } catch {
+      await api('POST', '/import-all', statePayload);
+    }
+  }, []);
+
   return {
     data,
     allBudgets: budgets,
@@ -717,5 +753,6 @@ export function useAppData() {
     deleteBill,
     exportAllData,
     importAllData,
+    resetAllData,
   };
 }

@@ -49,6 +49,14 @@ def import_all(body: dict):
     return {"ok": True}
 
 
+@app.post("/api/reset-all")
+def reset_all(body: dict):
+    state = body.get("state") or {}
+    keep_templates = bool(body.get("keepTemplates", True))
+    db.reset_all_data(state, keep_templates=keep_templates)
+    return {"ok": True}
+
+
 @app.get("/api/load-all")
 def load_all():
     data = db.load_all_data()

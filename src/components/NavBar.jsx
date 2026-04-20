@@ -12,6 +12,7 @@ const BUDGET_SUB_PAGES = [
 const SETTINGS_ITEMS = [
   { id: 'categories', label: 'Categories & Accounts', icon: '⚙️', activePages: ['categories', 'accounts'] },
   { id: 'templates', label: 'Templates', icon: '🧩' },
+  { id: 'updates', label: 'Updates', icon: '⬆️' },
   { id: 'data-management', label: 'Manage Data', icon: '🗄️' },
   { id: 'whats-new', label: "What's New", icon: '🧭' },
   { id: 'about', label: 'About', icon: 'ℹ️' },

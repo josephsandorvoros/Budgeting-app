@@ -23,6 +23,10 @@ const SECTIONS = [
         q: 'Switching budgets',
         a: 'Click any budget name in the sidebar to make it active. The whole app — Dashboard, Transactions, Accounts, etc. — will reflect that budget\'s data.',
       },
+      {
+        q: 'Checking for app updates',
+        a: 'Open Settings → Updates to see your installed version, check the latest release, and download the newest installer for in-place upgrades.',
+      },
     ],
   },
   {
@@ -198,6 +202,10 @@ const SECTIONS = [
       {
         q: 'Data persistence',
         a: 'All data is saved to a local SQLite database managed by the backend. Settings and customisations (icon favourites, account groups, category layout) are also saved to the backend so they survive browser clears and reinstalls.',
+      },
+      {
+        q: 'Reset to preview data',
+        a: 'In Settings → Manage Data, use Reset All Data to restore the app to a clean preview state. You can choose to keep your custom templates or reset templates back to built-in only.',
       },
     ],
   },

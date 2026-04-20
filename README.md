@@ -54,6 +54,15 @@ npm run dist:linux
 
 Artifacts are written to the release folder.
 
+## Data Reset (Preview Mode)
+
+From Settings -> Manage Data, you can use Reset All Data to replace all budgets and records with preview defaults.
+
+- Option A: keep custom templates
+- Option B: reset templates back to built-in only
+
+Use this before shipping demo/preview builds when you want a clean starter state.
+
 ## End-User Install (Windows)
 
 1. Download the latest `Budget Ledger-*-win-x64.exe` from GitHub Releases.
@@ -77,6 +86,16 @@ For more details on code signing, see the [License](#license) section.
 - Release page: https://github.com/josephsandorvoros/Budgeting-app/releases
 - Beta 1.3 page: https://github.com/josephsandorvoros/Budgeting-app/releases/tag/beta1.3
 - Beta 1.3 Windows installer: https://github.com/josephsandorvoros/Budgeting-app/releases/download/beta1.3/Budget.Ledger-1.0.0-win-x64.exe
+
+## In-App Updates
+
+Go to Settings -> Updates to:
+
+- view your current installed app version
+- check the latest GitHub release
+- download the latest installer for your platform
+
+You can run the new installer over the existing install to update in place (no manual uninstall required).
 
 ## CI Installers
 

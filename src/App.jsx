@@ -11,6 +11,7 @@ import BillsRecurring from './pages/BillsRecurring.jsx';
 import ManageBudgets from './pages/ManageBudgets.jsx';
 import DataManagement from './pages/DataManagement.jsx';
 import Templates from './pages/Templates.jsx';
+import Updates from './pages/Updates.jsx';
 import WhatsNew from './pages/WhatsNew.jsx';
 import About from './pages/About.jsx';
 import Help from './pages/Help.jsx';
@@ -94,6 +95,7 @@ export default function App() {
     deleteBill,
     exportAllData,
     importAllData,
+    resetAllData,
   } = useAppData();
 
   const navigate = (p) => {
@@ -219,6 +221,7 @@ export default function App() {
               exportAllData={exportAllData}
               importAllData={importAllData}
               importTransactions={importTransactions}
+              resetAllData={resetAllData}
             />
           )}
           {page === 'templates' && (
@@ -233,6 +236,7 @@ export default function App() {
               onApplyTemplateToCurrent={applyTemplateToCurrent}
             />
           )}
+          {page === 'updates' && <Updates />}
           {page === 'whats-new' && <WhatsNew />}
           {page === 'about' && <About />}
           {page === 'help' && <Help />}

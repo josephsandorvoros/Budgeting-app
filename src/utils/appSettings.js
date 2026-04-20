@@ -10,12 +10,24 @@ function parseStoredValue(raw, fallback) {
 }
 
 export async function saveAppSetting(key, value) {
-  const res = await fetch(`${API_BASE}/settings/${encodeURIComponent(key)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: JSON.stringify(value) }),
-  });
-  if (!res.ok) throw new Error(`Failed to save setting ${key}`);
+  const serialized = JSON.stringify(value);
+  try {
+    const res = await fetch(`${API_BASE}/settings/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: serialized }),
+    });
+    if (!res.ok) throw new Error(`Failed to save setting ${key}`);
+    return;
+  } catch {
+    // Electron/offline fallback: keep settings sticky even if API is unavailable.
+    try {
+      localStorage.setItem(key, serialized);
+      return;
+    } catch {
+      throw new Error(`Failed to save setting ${key}`);
+    }
+  }
 }
 
 export async function loadAppSetting(key, fallback, legacyLocalKey = key) {

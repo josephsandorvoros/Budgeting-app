@@ -165,6 +165,19 @@ def delete_template(template_id: str):
     save_templates(templates)
 
 
+def reset_all_data(full_state: dict, keep_templates: bool = True):
+    templates = get_templates() if keep_templates else []
+
+    with get_connection() as conn:
+        conn.execute("DELETE FROM budgets")
+        conn.execute("DELETE FROM app_settings")
+
+    if keep_templates:
+        save_templates(templates)
+
+    import_all_data(full_state)
+
+
 def import_all_data(full_state: dict):
     with get_connection() as conn:
         for budget_id, budget in (full_state.get("budgets") or {}).items():

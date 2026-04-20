@@ -80,12 +80,13 @@ function parseCsv(text) {
   });
 }
 
-export default function DataManagement({ data, exportAllData, importAllData, importTransactions }) {
+export default function DataManagement({ data, exportAllData, importAllData, importTransactions, resetAllData }) {
   const backupInputRef = useRef(null);
   const csvInputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [keepTemplatesOnReset, setKeepTemplatesOnReset] = useState(true);
 
   const handleCreateBackup = () => {
     setErr('');
@@ -167,6 +168,31 @@ export default function DataManagement({ data, exportAllData, importAllData, imp
     }
   };
 
+  const handleResetAllData = async () => {
+    if (typeof resetAllData !== 'function') return;
+
+    const shouldContinue = window.confirm(
+      'This will replace all budgets, transactions, accounts, bills, and settings with preview defaults. Continue?'
+    );
+    if (!shouldContinue) return;
+
+    setBusy(true);
+    setErr('');
+    setMsg('');
+    try {
+      await resetAllData({ keepTemplates: keepTemplatesOnReset });
+      setMsg(
+        keepTemplatesOnReset
+          ? 'All data reset to preview defaults. Custom templates were kept.'
+          : 'All data reset to preview defaults. Templates were reset to built-in defaults only.'
+      );
+    } catch (error) {
+      setErr(error.message || 'Failed to reset all data.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="page">
       <div className="page-header">
@@ -197,6 +223,32 @@ export default function DataManagement({ data, exportAllData, importAllData, imp
           <button className="btn-primary" onClick={handleExportTransactionsCsv} disabled={busy}>Export CSV</button>
           <button className="btn-ghost" onClick={() => csvInputRef.current?.click()} disabled={busy}>Import CSV</button>
           <input ref={csvInputRef} type="file" accept="text/csv,.csv" style={{ display: 'none' }} onChange={handleImportTransactionsCsv} />
+        </div>
+      </div>
+
+      <div className="card" style={{ maxWidth: 760, display: 'grid', gap: 12 }}>
+        <div style={{ fontWeight: 700, color: 'var(--text)' }}>Reset All Data</div>
+        <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+          Replaces all budgets and records with preview defaults. Use this when preparing a clean demo state.
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)' }}>
+          <input
+            type="checkbox"
+            checked={keepTemplatesOnReset}
+            onChange={(e) => setKeepTemplatesOnReset(e.target.checked)}
+            disabled={busy}
+          />
+          Keep my custom templates
+        </label>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            className="btn-ghost"
+            onClick={handleResetAllData}
+            disabled={busy}
+            style={{ borderColor: 'rgba(248, 113, 113, 0.45)', color: '#fca5a5' }}
+          >
+            Reset All Data
+          </button>
         </div>
       </div>
 
