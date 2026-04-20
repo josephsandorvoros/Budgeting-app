@@ -1,4 +1,6 @@
-const API_BASE = '/api';
+const API_BASE = (typeof window !== 'undefined' && window.electronAPI)
+  ? 'http://127.0.0.1:8765/api'
+  : '/api';
 
 function parseStoredValue(raw, fallback) {
   if (raw === null || raw === undefined) return fallback;

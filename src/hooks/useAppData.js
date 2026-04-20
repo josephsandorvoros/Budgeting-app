@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { DEFAULT_DATA, DEFAULT_ACCOUNTS, DEFAULT_BILLS } from '../data/defaults.js';
 
 const STORAGE_KEY = 'budget_app_v6';
-const API_BASE = (typeof window !== 'undefined' && window.electronAPI)
+const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI;
+const API_BASE = IS_ELECTRON
   ? 'http://127.0.0.1:8765/api'
   : '/api';
 const DEFAULT_TEMPLATE_ID = 'tpl_builtin_comprehensive';
@@ -266,17 +267,30 @@ function loadLocalState() {
   }
 }
 
+function clearLegacyBudgetCache() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('budget_app_v5');
+  } catch {
+    // ignore local cache cleanup failures
+  }
+}
+
 export function useAppData() {
   const [state, setState] = useState(() => ({ currentId: null, budgets: {}, templates: [], loading: true }));
 
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
-    withTimeout(api('GET', '/has-data'), 3000, 'has-data').then(async ({ hasData }) => {
+    const hasDataTimeout = IS_ELECTRON ? 10000 : 3000;
+    const loadAllTimeout = IS_ELECTRON ? 20000 : 6000;
+    const templatesTimeout = IS_ELECTRON ? 10000 : 3000;
+
+    withTimeout(api('GET', '/has-data'), hasDataTimeout, 'has-data').then(async ({ hasData }) => {
       const [data, templateData] = await Promise.all([
         hasData
-          ? withTimeout(api('GET', '/load-all'), 6000, 'load-all')
+          ? withTimeout(api('GET', '/load-all'), loadAllTimeout, 'load-all')
           : Promise.resolve({ currentId: null, budgets: {} }),
-        withTimeout(api('GET', '/templates'), 3000, 'templates').catch(() => ({ templates: [] })),
+        withTimeout(api('GET', '/templates'), templatesTimeout, 'templates').catch(() => ({ templates: [] })),
       ]);
       let templates = Array.isArray(templateData?.templates) ? templateData.templates : [];
       const builtIns = buildBuiltInTemplates();
@@ -299,8 +313,13 @@ export function useAppData() {
         ? data
         : { currentId: null, budgets: {} };
       setState({ ...base, templates, loading: false });
+      if (IS_ELECTRON) clearLegacyBudgetCache();
     }).catch(err => {
-      console.error('Backend API error, falling back to localStorage', err);
+      console.error('Backend API error during initial load', err);
+      if (IS_ELECTRON) {
+        setState({ currentId: null, budgets: {}, templates: buildBuiltInTemplates(), loading: false });
+        return;
+      }
       const local = loadLocalState();
       setState({ ...local, templates: local.templates || buildBuiltInTemplates(), loading: false });
     });
