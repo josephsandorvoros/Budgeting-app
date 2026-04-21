@@ -585,10 +585,14 @@ export function useAppData() {
   const addCategory = useCallback((group, name) => {
     if (!name.trim()) return;
     mutateCurrent(b => {
-      if (!b.categories[group].includes(name.trim())) {
-        b.categories[group] = [...b.categories[group], name.trim()];
+      const nextName = name.trim();
+      if (!b.categories) b.categories = {};
+      if (!Array.isArray(b.categories[group])) b.categories[group] = [];
+      if (!b.budget) b.budget = {};
+      if (!b.categories[group].includes(nextName)) {
+        b.categories[group] = [...b.categories[group], nextName];
         if (!b.budget[group]) b.budget[group] = {};
-        b.budget[group][name.trim()] = new Array(12).fill(0);
+        b.budget[group][nextName] = new Array(12).fill(0);
       }
       return b;
     });
@@ -597,6 +601,8 @@ export function useAppData() {
 
   const removeCategory = useCallback((group, name) => {
     mutateCurrent(b => {
+      if (!b.categories) b.categories = {};
+      if (!Array.isArray(b.categories[group])) b.categories[group] = [];
       b.categories[group] = b.categories[group].filter(c => c !== name);
       if (b.budget[group]) delete b.budget[group][name];
       return b;

@@ -181,6 +181,29 @@ export default function IconPicker({
     });
   }, [customIcons, storageKey, customLoaded]);
 
+  useEffect(() => {
+    if (!customLoaded) return;
+
+    const seeds = [value, ...favorites, ...recent]
+      .map(normalizeCustomIconValue)
+      .filter(Boolean);
+
+    if (!seeds.length) return;
+
+    setCustomIcons((prev) => {
+      const next = [...prev];
+      let changed = false;
+      seeds.forEach((icon) => {
+        if (!next.includes(icon) && !options.includes(icon)) {
+          next.unshift(icon);
+          changed = true;
+        }
+      });
+      if (!changed) return prev;
+      return next.slice(0, 150);
+    });
+  }, [value, favorites, recent, options, customLoaded]);
+
   const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
   const recentSet = useMemo(() => new Set(recent), [recent]);
 
