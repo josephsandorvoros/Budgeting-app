@@ -40,22 +40,24 @@ function normalizeGroupName(value) {
   return undefined;
 }
 
-function resolveTransactionGroup(tx, categories = {}) {
-  const explicit = normalizeGroupName(tx?.group || tx?.group_name);
-  if (explicit !== undefined) return explicit;
-
+function resolveTypeGroup(tx) {
   const typeBased = normalizeGroupName(tx?.type);
   if (typeBased !== undefined) return typeBased;
 
-  const categoryName = normalizeCategoryKey(tx?.category);
-  if (categoryName) {
-    const matched = DASHBOARD_GROUPS.find((group) =>
-      (categories[group] || []).some((cat) => normalizeCategoryKey(cat) === categoryName)
-    );
-    if (matched) return matched;
-  }
+  const explicit = normalizeGroupName(tx?.group || tx?.group_name);
+  if (explicit !== undefined) return explicit;
 
-  return 'Expenses';
+  return undefined;
+}
+
+function resolveCategoryGroup(tx, categoryGroupIndex = {}) {
+  const categoryName = normalizeCategoryKey(tx?.category);
+  if (categoryName && categoryGroupIndex[categoryName]) return categoryGroupIndex[categoryName];
+
+  const explicit = normalizeGroupName(tx?.group || tx?.group_name);
+  if (explicit !== undefined) return explicit;
+
+  return undefined;
 }
 
 export default function Dashboard({ data, allBudgets = {}, budgetList = [], currentId, onSwitchBudget }) {
@@ -136,18 +138,25 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     [transactions, selectedYear]
   );
 
+  const categoryGroupIndex = useMemo(() => {
+    const map = {};
+    DASHBOARD_GROUPS.forEach((group) => {
+      (categories[group] || []).forEach((cat) => {
+        const key = normalizeCategoryKey(cat);
+        if (key && map[key] === undefined) map[key] = group;
+      });
+    });
+    return map;
+  }, [categories]);
+
   const groupCategories = useMemo(() => {
     const map = {};
     DASHBOARD_GROUPS.forEach((group) => {
       const configured = categories[group] || [];
-      const fromTransactions = filteredTransactions
-        .filter((tx) => resolveTransactionGroup(tx, categories) === group)
-        .map((tx) => String(tx.category || '').trim())
-        .filter(Boolean);
-      map[group] = Array.from(new Set([...configured, ...fromTransactions]));
+      map[group] = Array.from(new Set(configured.map((cat) => String(cat || '').trim()).filter(Boolean)));
     });
     return map;
-  }, [categories, filteredTransactions]);
+  }, [categories]);
 
   // Annual budget per group+cat
   const annualBudgetByCat = useMemo(() => {
@@ -165,19 +174,16 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
   const catActuals = useMemo(() => {
     const result = {};
     DASHBOARD_GROUPS.forEach(g => {
-      const groupTransactions = filteredTransactions.filter(
-        (t) => resolveTransactionGroup(t, categories) === g
-      );
       result[g] = {};
       (groupCategories[g] || []).forEach(cat => {
         const catKey = normalizeCategoryKey(cat);
-        result[g][cat] = groupTransactions
-          .filter((t) => normalizeCategoryKey(t.category) === catKey)
+        result[g][cat] = filteredTransactions
+          .filter((t) => resolveCategoryGroup(t, categoryGroupIndex) === g && normalizeCategoryKey(t.category) === catKey)
           .reduce((s, t) => s + normalizeAmount(t.amount), 0);
       });
     });
     return result;
-  }, [groupCategories, filteredTransactions, categories]);
+  }, [groupCategories, filteredTransactions, categoryGroupIndex]);
 
   // Monthly totals per group (for bar chart)
   const monthlyByGroup = useMemo(() => {
@@ -191,7 +197,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
             const d = new Date(t.date);
             return d.getMonth() === mIdx
               && d.getFullYear() === Number(selectedYear)
-              && resolveTransactionGroup(t, categories) === g
+              && resolveCategoryGroup(t, categoryGroupIndex) === g
               && categoryKeys.has(normalizeCategoryKey(t.category));
           })
           .reduce((s, t) => s + normalizeAmount(t.amount), 0);
@@ -199,10 +205,31 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
       });
     });
     return result;
-  }, [budget, categories, groupCategories, transactions, selectedYear]);
+  }, [budget, categoryGroupIndex, groupCategories, transactions, selectedYear]);
 
-  // Top-level stats
-  const stats = useMemo(() =>
+  // Top tiles: pure transaction-type totals
+  const topActualByGroup = useMemo(() => {
+    const result = Object.fromEntries(DASHBOARD_GROUPS.map((group) => [group, 0]));
+    filteredTransactions.forEach((tx) => {
+      const group = resolveTypeGroup(tx);
+      if (!group || !result[group] && result[group] !== 0) return;
+      result[group] += normalizeAmount(tx.amount);
+    });
+    return result;
+  }, [filteredTransactions]);
+
+  const topStats = useMemo(() =>
+    SECTIONS.map(sec => {
+      const goal = Object.values(annualBudgetByCat[sec.group] || {}).reduce((s, v) => s + v, 0);
+      const actual = topActualByGroup[sec.group] || 0;
+      const pct = goal > 0 ? Math.round((actual / goal) * 100) : 0;
+      const under = goal - actual;
+      return { ...sec, goal, actual, pct, under };
+    }),
+  [annualBudgetByCat, topActualByGroup]);
+
+  // Section stats: category-driven actuals for lower dashboard panels
+  const sectionStats = useMemo(() =>
     SECTIONS.map(sec => {
       const goal = Object.values(annualBudgetByCat[sec.group] || {}).reduce((s, v) => s + v, 0);
       const actual = Object.values(catActuals[sec.group] || {}).reduce((s, v) => s + v, 0);
@@ -211,6 +238,8 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
       return { ...sec, goal, actual, pct, under };
     }),
   [annualBudgetByCat, catActuals]);
+
+  const topIncomeActual = topStats.find((s) => s.group === 'Income')?.actual || 0;
 
   // Sub-stats
   const subStats = useMemo(() => {
@@ -246,7 +275,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
   const renderSection = (sec, idx) => {
     const { group, cssClass, label, accent } = sec;
     const cats = groupCategories[group] || [];
-    const statRow = stats[idx];
+    const statRow = sectionStats[idx];
     const monthlyData = monthlyByGroup[group];
     const pieData = donutData[group];
 
@@ -352,7 +381,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
                     <div style={{ marginTop: 12 }}>
                       <div className="section-panel-title">% of Income Spent on Expenses</div>
                       <div style={{ color: accent, fontSize: '1.1rem', fontWeight: 700 }}>
-                        {stats[0].actual > 0 ? `${Math.round((statRow.actual / stats[0].actual) * 100)}%` : '—'}
+                        {topIncomeActual > 0 ? `${Math.round((statRow.actual / topIncomeActual) * 100)}%` : '—'}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
@@ -373,7 +402,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
                   <>
                     <div className="section-panel-title">% of Income → Debt</div>
                     <div style={{ color: accent, fontSize: '1.1rem', fontWeight: 700 }}>
-                      {stats[0].actual > 0 ? `${Math.round((statRow.actual / stats[0].actual) * 100)}%` : '—'}
+                      {topIncomeActual > 0 ? `${Math.round((statRow.actual / topIncomeActual) * 100)}%` : '—'}
                     </div>
                     <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
                       <div>
@@ -391,7 +420,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
                   <>
                     <div className="section-panel-title">% of Income → Savings</div>
                     <div style={{ color: accent, fontSize: '1.1rem', fontWeight: 700 }}>
-                      {stats[0].actual > 0 ? `${Math.round((statRow.actual / stats[0].actual) * 100)}%` : '—'}
+                      {topIncomeActual > 0 ? `${Math.round((statRow.actual / topIncomeActual) * 100)}%` : '—'}
                     </div>
                     <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
                       <div>
@@ -409,7 +438,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
                   <>
                     <div className="section-panel-title">% of Income → Investments</div>
                     <div style={{ color: accent, fontSize: '1.1rem', fontWeight: 700 }}>
-                      {stats[0].actual > 0 ? `${Math.round((statRow.actual / stats[0].actual) * 100)}%` : '—'}
+                      {topIncomeActual > 0 ? `${Math.round((statRow.actual / topIncomeActual) * 100)}%` : '—'}
                     </div>
                     <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
                       <div>
@@ -499,7 +528,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
 
       {/* Stat tiles */}
       <div className="stat-tiles">
-        {stats.map(s => (
+        {topStats.map(s => (
           <div key={s.group} className="stat-tile">
             <div className={`stat-tile-header section-header ${s.cssClass}`}>{s.label}</div>
             <div className="stat-tile-body">
