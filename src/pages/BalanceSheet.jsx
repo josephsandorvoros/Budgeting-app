@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MONTHS, ACCOUNT_HIERARCHY } from '../data/defaults.js';
+import AppIcon from '../components/AppIcon.jsx';
 
 const fmt = (v) =>
   v == null ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(v);
@@ -140,7 +141,7 @@ export default function BalanceSheet({ data, updateAccountBalance, updateAccount
                       {!collapsed[`${cls}-${st}`] && accs.map(acc => (
                         <tr key={acc.id} className="bs-row-account">
                           <td className="bs-td-name">
-                            <span className="bs-acc-icon">{acc.icon}</span>
+                            <AppIcon value={acc.icon} fallback="🏦" className="bs-acc-icon" label="account icon" />
                             {acc.name}
                           </td>
                           <td className="bs-td-cell">

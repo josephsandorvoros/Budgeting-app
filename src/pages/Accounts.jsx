@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ACCOUNT_HIERARCHY } from '../data/defaults.js';
+import AppIcon from '../components/AppIcon.jsx';
 
 const fmtAbs = (v) => {
   if (v == null) return '—';
@@ -216,7 +217,7 @@ export default function Accounts({ data, updateTransaction }) {
                         className={`acc-tree-item${selectedAccount === acc.id ? ' selected' : ''}`}
                         onClick={() => setSelectedAccount(acc.id === selectedAccount ? null : acc.id)}
                       >
-                        <span className="acc-tree-icon">{acc.icon}</span>
+                        <AppIcon value={acc.icon} fallback="🏦" className="acc-tree-icon" label="account icon" />
                         <span className="acc-tree-name">{acc.name}</span>
                         <span className={`acc-tree-bal${cls === 'LIABILITIES' ? ' neg' : ''}`}>
                           {fmtAbs(acc.startBalance)}
@@ -243,7 +244,7 @@ export default function Accounts({ data, updateTransaction }) {
               {/* Register header */}
               <div className="acc-reg-header">
                 <div className="acc-reg-title">
-                  <span className="acc-reg-icon">{selectedAcc?.icon}</span>
+                  <AppIcon value={selectedAcc?.icon} fallback="🏦" className="acc-reg-icon" label="selected account icon" />
                   <div>
                     <h2>{selectedAcc?.name}</h2>
                     <div className="acc-reg-subtitle">{selectedAcc?.subtype} · {filtered.length} of {fullRegister.length} transactions</div>
