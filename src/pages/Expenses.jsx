@@ -9,6 +9,7 @@ const GROUP_BY_TYPE = {
   debt: 'Debt',
 };
 const fmtAbs = (n) => `$${Math.abs(Number(n)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const normalizeAmount = (v) => Math.abs(Number(v) || 0);
 
 function sortAlpha(values = []) {
   return [...values].sort((a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' }));
@@ -241,8 +242,8 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
   }, [filtered]);
 
   // Overall stats
-  const totalIn  = useMemo(() => filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0), [filtered]);
-  const totalOut = useMemo(() => filtered.filter(t => t.type !== 'income').reduce((s, t) => s + t.amount, 0), [filtered]);
+  const totalIn  = useMemo(() => filtered.filter(t => t.type === 'income').reduce((s, t) => s + normalizeAmount(t.amount), 0), [filtered]);
+  const totalOut = useMemo(() => filtered.filter(t => t.type !== 'income').reduce((s, t) => s + normalizeAmount(t.amount), 0), [filtered]);
   const totalNet = totalIn - totalOut;
 
   // Form handlers
@@ -265,7 +266,7 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.description || !form.amount || !form.date) return;
-    addTransaction({ ...form, amount: parseFloat(form.amount) });
+    addTransaction({ ...form, amount: normalizeAmount(form.amount) });
     setForm(emptyForm(categories));
     setShowForm(false);
   };
@@ -274,7 +275,7 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
   const cancelEdit = ()  => { setEditingId(null); setEditForm(null); };
   const saveEdit   = ()  => {
     if (!editForm) return;
-    updateTransaction(editingId, { ...editForm, amount: parseFloat(editForm.amount) || 0 });
+    updateTransaction(editingId, { ...editForm, amount: normalizeAmount(editForm.amount) });
     setEditingId(null); setEditForm(null);
   };
 

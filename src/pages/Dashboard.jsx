@@ -21,6 +21,7 @@ const fmtShort = (v) => {
   if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
   return `$${n}`;
 };
+const normalizeAmount = (v) => Math.abs(Number(v) || 0);
 
 const CHART_COLORS = ['#4ade80','#ec4899','#a855f7','#eab308','#60a5fa','#f97316','#34d399','#f43f5e','#818cf8','#fb923c'];
 const DASHBOARD_GROUPS = ['Income','Expenses','Debt','Savings','Investments'];
@@ -166,7 +167,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
       (groupCategories[g] || []).forEach(cat => {
         result[g][cat] = groupTransactions
           .filter((t) => t.category === cat)
-          .reduce((s, t) => s + Number(t.amount), 0);
+          .reduce((s, t) => s + normalizeAmount(t.amount), 0);
       });
     });
     return result;
@@ -186,7 +187,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
               && resolveTransactionGroup(t, categories) === g
               && (groupCategories[g] || []).includes(t.category);
           })
-          .reduce((s, t) => s + Number(t.amount), 0);
+          .reduce((s, t) => s + normalizeAmount(t.amount), 0);
         return { month, budget: budgetTotal, actual: actualTotal };
       });
     });
@@ -212,7 +213,9 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     const expNeed       = sum('Expenses', c => CATEGORY_META.Expenses?.[c]?.need);
     const expWant       = sum('Expenses', c => !CATEGORY_META.Expenses?.[c]?.need);
     const expTotal      = expNeed + expWant;
-    const subscriptions = filteredTransactions.filter(t => t.subscription || t.isSubscription).reduce((s, t) => s + Number(t.amount), 0);
+    const subscriptions = filteredTransactions
+      .filter(t => t.subscription || t.isSubscription)
+      .reduce((s, t) => s + normalizeAmount(t.amount), 0);
     const debtHigh      = sum('Debt',    c => CATEGORY_META.Debt?.[c]?.highPriority);
     const debtLow       = sum('Debt',    c => !CATEGORY_META.Debt?.[c]?.highPriority);
     const savLong       = sum('Savings', c => CATEGORY_META.Savings?.[c]?.longTerm);
