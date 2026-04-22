@@ -142,8 +142,8 @@ Note:
     2.0.0 for breaking changes
 
 ```
-git tag beta1.20
-git push origin beta1.20
+git tag beta1.21
+git push origin beta1.21
 ```
 
 ✓ Workflow triggers, builds installers, and publishes the release automatically

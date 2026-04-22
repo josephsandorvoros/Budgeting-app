@@ -159,13 +159,18 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
   const catActuals = useMemo(() => {
     const result = {};
     DASHBOARD_GROUPS.forEach(g => {
+      const groupTransactions = filteredTransactions.filter(
+        (t) => resolveTransactionGroup(t, categories) === g
+      );
       result[g] = {};
       (groupCategories[g] || []).forEach(cat => {
-        result[g][cat] = filteredTransactions.filter(t => t.category === cat).reduce((s, t) => s + Number(t.amount), 0);
+        result[g][cat] = groupTransactions
+          .filter((t) => t.category === cat)
+          .reduce((s, t) => s + Number(t.amount), 0);
       });
     });
     return result;
-  }, [groupCategories, filteredTransactions]);
+  }, [groupCategories, filteredTransactions, categories]);
 
   // Monthly totals per group (for bar chart)
   const monthlyByGroup = useMemo(() => {
