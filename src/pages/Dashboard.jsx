@@ -26,27 +26,32 @@ const normalizeAmount = (v) => Math.abs(Number(v) || 0);
 const CHART_COLORS = ['#4ade80','#ec4899','#a855f7','#eab308','#60a5fa','#f97316','#34d399','#f43f5e','#818cf8','#fb923c'];
 const DASHBOARD_GROUPS = ['Income','Expenses','Debt','Savings','Investments'];
 
+const normalizeCategoryKey = (value) => String(value || '').trim().toLowerCase();
+
 function normalizeGroupName(value) {
   const key = String(value || '').trim().toLowerCase();
-  if (!key) return null;
+  if (!key) return undefined;
   if (key === 'income' || key === 'in') return 'Income';
   if (key === 'expense' || key === 'expenses' || key === 'out') return 'Expenses';
   if (key === 'saving' || key === 'savings') return 'Savings';
   if (key === 'debt') return 'Debt';
   if (key === 'investment' || key === 'investments') return 'Investments';
-  return null;
+  if (key === 'transfer' || key === 'transfers') return null;
+  return undefined;
 }
 
 function resolveTransactionGroup(tx, categories = {}) {
   const explicit = normalizeGroupName(tx?.group || tx?.group_name);
-  if (explicit) return explicit;
+  if (explicit !== undefined) return explicit;
 
   const typeBased = normalizeGroupName(tx?.type);
-  if (typeBased) return typeBased;
+  if (typeBased !== undefined) return typeBased;
 
-  const categoryName = String(tx?.category || '').trim();
+  const categoryName = normalizeCategoryKey(tx?.category);
   if (categoryName) {
-    const matched = DASHBOARD_GROUPS.find((group) => (categories[group] || []).includes(categoryName));
+    const matched = DASHBOARD_GROUPS.find((group) =>
+      (categories[group] || []).some((cat) => normalizeCategoryKey(cat) === categoryName)
+    );
     if (matched) return matched;
   }
 
@@ -165,8 +170,9 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
       );
       result[g] = {};
       (groupCategories[g] || []).forEach(cat => {
+        const catKey = normalizeCategoryKey(cat);
         result[g][cat] = groupTransactions
-          .filter((t) => t.category === cat)
+          .filter((t) => normalizeCategoryKey(t.category) === catKey)
           .reduce((s, t) => s + normalizeAmount(t.amount), 0);
       });
     });
@@ -179,13 +185,14 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     DASHBOARD_GROUPS.forEach(g => {
       result[g] = MONTHS.map((month, mIdx) => {
         const budgetTotal = (groupCategories[g] || []).reduce((s, cat) => s + (budget[g]?.[cat]?.[mIdx] || 0), 0);
+        const categoryKeys = new Set((groupCategories[g] || []).map((cat) => normalizeCategoryKey(cat)));
         const actualTotal = transactions
           .filter(t => {
             const d = new Date(t.date);
             return d.getMonth() === mIdx
               && d.getFullYear() === Number(selectedYear)
               && resolveTransactionGroup(t, categories) === g
-              && (groupCategories[g] || []).includes(t.category);
+              && categoryKeys.has(normalizeCategoryKey(t.category));
           })
           .reduce((s, t) => s + normalizeAmount(t.amount), 0);
         return { month, budget: budgetTotal, actual: actualTotal };

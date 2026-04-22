@@ -68,6 +68,8 @@ def init_database():
                 type            TEXT,
                 is_subscription INTEGER DEFAULT 0,
                 notes           TEXT,
+                from_account_id TEXT,
+                to_account_id   TEXT,
                 FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE
             );
             CREATE TABLE IF NOT EXISTS accounts (
@@ -110,6 +112,12 @@ def init_database():
         cols = [r["name"] for r in conn.execute("PRAGMA table_info(budgets)").fetchall()]
         if "icon" not in cols:
             conn.execute("ALTER TABLE budgets ADD COLUMN icon TEXT NOT NULL DEFAULT '📈'")
+
+        tx_cols = [r["name"] for r in conn.execute("PRAGMA table_info(transactions)").fetchall()]
+        if "from_account_id" not in tx_cols:
+            conn.execute("ALTER TABLE transactions ADD COLUMN from_account_id TEXT")
+        if "to_account_id" not in tx_cols:
+            conn.execute("ALTER TABLE transactions ADD COLUMN to_account_id TEXT")
 
 
 # ── Check / Seed ──────────────────────────────────────────────────────────────
@@ -212,11 +220,11 @@ def import_all_data(full_state: dict):
 
             for tx in (budget.get("transactions") or []):
                 conn.execute(
-                    "INSERT INTO transactions (id, budget_id, date, description, category, group_name, amount, type, is_subscription, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO transactions (id, budget_id, date, description, category, group_name, amount, type, is_subscription, notes, from_account_id, to_account_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (tx.get("id") or gen_id("tx"), budget_id, tx.get("date", ""), tx.get("description"),
                      tx.get("category"), tx.get("group") or tx.get("group_name", ""),
                      tx.get("amount", 0), tx.get("type"), 1 if (tx.get("isSubscription") or tx.get("is_subscription")) else 0,
-                     tx.get("notes", ""))
+                     tx.get("notes", ""), tx.get("fromAccountId") or tx.get("from_account_id"), tx.get("toAccountId") or tx.get("to_account_id"))
                 )
 
             acc_sort = 0
@@ -297,7 +305,8 @@ def load_all_data() -> dict | None:
                 {"id": t["id"], "date": t["date"], "description": t["description"],
                  "category": t["category"], "group": t["group_name"],
                  "amount": t["amount"], "type": t["type"],
-                 "isSubscription": bool(t["is_subscription"]), "notes": t["notes"]}
+                 "isSubscription": bool(t["is_subscription"]), "notes": t["notes"],
+                 "fromAccountId": t["from_account_id"], "toAccountId": t["to_account_id"]}
                 for t in conn.execute("SELECT * FROM transactions WHERE budget_id = ? ORDER BY date DESC", (bid,)).fetchall()
             ]
 
@@ -389,10 +398,10 @@ def delete_budget(budget_id: str) -> str | None:
 def add_transaction(budget_id: str, tx: dict):
     with get_connection() as conn:
         conn.execute(
-            "INSERT INTO transactions (id, budget_id, date, description, category, group_name, amount, type, is_subscription, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO transactions (id, budget_id, date, description, category, group_name, amount, type, is_subscription, notes, from_account_id, to_account_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (tx.get("id") or gen_id("tx"), budget_id, tx.get("date", ""), tx.get("description"),
              tx.get("category"), tx.get("group", ""), tx.get("amount", 0), tx.get("type"),
-             1 if tx.get("isSubscription") else 0, tx.get("notes", ""))
+             1 if tx.get("isSubscription") else 0, tx.get("notes", ""), tx.get("fromAccountId") or tx.get("from_account_id"), tx.get("toAccountId") or tx.get("to_account_id"))
         )
 
 
@@ -401,6 +410,7 @@ def update_transaction(tx_id: str, updates: dict):
         "date": "date", "description": "description", "category": "category",
         "group": "group_name", "amount": "amount", "type": "type",
         "isSubscription": "is_subscription", "notes": "notes",
+        "fromAccountId": "from_account_id", "toAccountId": "to_account_id",
     }
     fields, vals = [], []
     for key, col in field_map.items():
@@ -426,11 +436,11 @@ def import_transactions(budget_id: str, tx_array: list):
     with get_connection() as conn:
         for tx in tx_array:
             conn.execute(
-                "INSERT OR IGNORE INTO transactions (id, budget_id, date, description, category, group_name, amount, type, is_subscription, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO transactions (id, budget_id, date, description, category, group_name, amount, type, is_subscription, notes, from_account_id, to_account_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (tx.get("id") or gen_id("tx"), budget_id, tx.get("date", ""), tx.get("description"),
                  tx.get("category"), tx.get("group") or tx.get("group_name", ""),
                  tx.get("amount", 0), tx.get("type"),
-                 1 if (tx.get("isSubscription") or tx.get("is_subscription")) else 0, tx.get("notes", ""))
+                 1 if (tx.get("isSubscription") or tx.get("is_subscription")) else 0, tx.get("notes", ""), tx.get("fromAccountId") or tx.get("from_account_id"), tx.get("toAccountId") or tx.get("to_account_id"))
             )
 
 
