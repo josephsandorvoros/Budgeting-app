@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow: () => ipcRenderer.invoke('window:close'),
   isWindowMaximized: () => ipcRenderer.invoke('window:isMaximized'),
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  getReleaseTag: () => ipcRenderer.invoke('app:getReleaseTag'),
   getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
   onWindowMaximizedChange: (callback) => {
     const listener = (_event, value) => callback(Boolean(value));

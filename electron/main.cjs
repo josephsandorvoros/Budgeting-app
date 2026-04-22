@@ -6,11 +6,13 @@ const fs = require('fs');
 const http = require('http');
 const { spawn } = require('child_process');
 const db = require('./database.cjs');
+const appPackage = require('../package.json');
 
 const isDev = process.env.NODE_ENV === 'development';
 const BACKEND_HOST = process.env.BUDGET_HOST || '127.0.0.1';
 const DEFAULT_BACKEND_PORT = isDev ? 8765 : 18765;
 const BACKEND_PORT = Number(process.env.BUDGET_PORT || DEFAULT_BACKEND_PORT);
+const APP_RELEASE_TAG = process.env.BUDGET_RELEASE_TAG || appPackage.releaseTag || null;
 let backendProcess = null;
 
 // Ensure Electron uses app-owned writable cache/session directories.
@@ -225,6 +227,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('window:close',            (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle('window:isMaximized',      (event) => BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false);
   ipcMain.handle('app:getVersion',          () => app.getVersion());
+  ipcMain.handle('app:getReleaseTag',       () => APP_RELEASE_TAG);
   ipcMain.handle('app:getPlatform',         () => process.platform);
 
   createWindow();

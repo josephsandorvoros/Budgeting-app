@@ -3,6 +3,7 @@
   "description": "Local-first personal and business budgeting desktop app.",
   "private": true,
   "version": "1.0.1",
+  "releaseTag": "beta1.19",
   "author": "Budget Ledger",
   "type": "module",
   "main": "electron/main.cjs",

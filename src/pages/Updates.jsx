@@ -103,6 +103,7 @@ function pickLatestRelease(releases) {
 
 export default function Updates() {
   const [version, setVersion] = useState('unknown');
+  const [installedReleaseTag, setInstalledReleaseTag] = useState('unknown');
   const [platform, setPlatform] = useState('win32');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -117,12 +118,22 @@ export default function Updates() {
   }, [installerAsset]);
 
   const statusText = useMemo(() => {
+    const latestTag = String(latest?.tag_name || '').trim();
+    const localTag = String(installedReleaseTag || '').trim();
+
+    if (latestTag && localTag && localTag !== 'unknown') {
+      const byTag = compareReleaseTags(localTag, latestTag);
+      if (byTag === 0) return 'Up to date';
+      if (byTag < 0) return 'Update available';
+      return 'Running newer local build';
+    }
+
     const cmp = compareSemver(version, latestInstallerVersion);
     if (cmp === null) return 'Unknown';
     if (cmp === 0) return 'Up to date';
     if (cmp < 0) return 'Update available';
     return 'Running newer local build';
-  }, [version, latestInstallerVersion]);
+  }, [installedReleaseTag, latest, version, latestInstallerVersion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +143,15 @@ export default function Updates() {
         if (window.electronAPI?.getAppVersion) {
           const v = await window.electronAPI.getAppVersion();
           if (!cancelled && v) setVersion(String(v));
+        }
+      } catch {
+        // keep fallback
+      }
+
+      try {
+        if (window.electronAPI?.getReleaseTag) {
+          const tag = await window.electronAPI.getReleaseTag();
+          if (!cancelled && tag) setInstalledReleaseTag(String(tag));
         }
       } catch {
         // keep fallback
@@ -197,6 +217,8 @@ export default function Updates() {
         <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: 8, columnGap: 12 }}>
           <div style={{ color: 'var(--muted)' }}>Installed version</div>
           <div style={{ color: 'var(--text)', fontWeight: 700 }}>{version}</div>
+          <div style={{ color: 'var(--muted)' }}>Installed release</div>
+          <div style={{ color: 'var(--text)', fontWeight: 700 }}>{installedReleaseTag}</div>
           <div style={{ color: 'var(--muted)' }}>Platform</div>
           <div style={{ color: 'var(--text)' }}>{platform}</div>
           <div style={{ color: 'var(--muted)' }}>Latest release</div>
