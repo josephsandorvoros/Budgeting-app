@@ -23,6 +23,34 @@ const fmtShort = (v) => {
 };
 
 const CHART_COLORS = ['#4ade80','#ec4899','#a855f7','#eab308','#60a5fa','#f97316','#34d399','#f43f5e','#818cf8','#fb923c'];
+const DASHBOARD_GROUPS = ['Income','Expenses','Debt','Savings','Investments'];
+
+function normalizeGroupName(value) {
+  const key = String(value || '').trim().toLowerCase();
+  if (!key) return null;
+  if (key === 'income' || key === 'in') return 'Income';
+  if (key === 'expense' || key === 'expenses' || key === 'out') return 'Expenses';
+  if (key === 'saving' || key === 'savings') return 'Savings';
+  if (key === 'debt') return 'Debt';
+  if (key === 'investment' || key === 'investments') return 'Investments';
+  return null;
+}
+
+function resolveTransactionGroup(tx, categories = {}) {
+  const explicit = normalizeGroupName(tx?.group || tx?.group_name);
+  if (explicit) return explicit;
+
+  const typeBased = normalizeGroupName(tx?.type);
+  if (typeBased) return typeBased;
+
+  const categoryName = String(tx?.category || '').trim();
+  if (categoryName) {
+    const matched = DASHBOARD_GROUPS.find((group) => (categories[group] || []).includes(categoryName));
+    if (matched) return matched;
+  }
+
+  return 'Expenses';
+}
 
 export default function Dashboard({ data, allBudgets = {}, budgetList = [], currentId, onSwitchBudget }) {
   const currentYear = new Date().getFullYear();
@@ -102,47 +130,63 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     [transactions, selectedYear]
   );
 
+  const groupCategories = useMemo(() => {
+    const map = {};
+    DASHBOARD_GROUPS.forEach((group) => {
+      const configured = categories[group] || [];
+      const fromTransactions = filteredTransactions
+        .filter((tx) => resolveTransactionGroup(tx, categories) === group)
+        .map((tx) => String(tx.category || '').trim())
+        .filter(Boolean);
+      map[group] = Array.from(new Set([...configured, ...fromTransactions]));
+    });
+    return map;
+  }, [categories, filteredTransactions]);
+
   // Annual budget per group+cat
   const annualBudgetByCat = useMemo(() => {
     const result = {};
-    ['Income','Expenses','Debt','Savings','Investments'].forEach(g => {
+    DASHBOARD_GROUPS.forEach(g => {
       result[g] = {};
-      (categories[g] || []).forEach(cat => {
+      (groupCategories[g] || []).forEach(cat => {
         result[g][cat] = (budget[g]?.[cat] || []).reduce((s, v) => s + (v || 0), 0);
       });
     });
     return result;
-  }, [budget, categories]);
+  }, [budget, groupCategories]);
 
   // Actual totals per group+cat (all transactions)
   const catActuals = useMemo(() => {
     const result = {};
-    ['Income','Expenses','Debt','Savings','Investments'].forEach(g => {
+    DASHBOARD_GROUPS.forEach(g => {
       result[g] = {};
-      (categories[g] || []).forEach(cat => {
+      (groupCategories[g] || []).forEach(cat => {
         result[g][cat] = filteredTransactions.filter(t => t.category === cat).reduce((s, t) => s + Number(t.amount), 0);
       });
     });
     return result;
-  }, [categories, filteredTransactions]);
+  }, [groupCategories, filteredTransactions]);
 
   // Monthly totals per group (for bar chart)
   const monthlyByGroup = useMemo(() => {
     const result = {};
-    ['Income','Expenses','Debt','Savings','Investments'].forEach(g => {
+    DASHBOARD_GROUPS.forEach(g => {
       result[g] = MONTHS.map((month, mIdx) => {
-        const budgetTotal = (categories[g] || []).reduce((s, cat) => s + (budget[g]?.[cat]?.[mIdx] || 0), 0);
+        const budgetTotal = (groupCategories[g] || []).reduce((s, cat) => s + (budget[g]?.[cat]?.[mIdx] || 0), 0);
         const actualTotal = transactions
           .filter(t => {
             const d = new Date(t.date);
-            return d.getMonth() === mIdx && d.getFullYear() === Number(selectedYear) && (categories[g] || []).includes(t.category);
+            return d.getMonth() === mIdx
+              && d.getFullYear() === Number(selectedYear)
+              && resolveTransactionGroup(t, categories) === g
+              && (groupCategories[g] || []).includes(t.category);
           })
           .reduce((s, t) => s + Number(t.amount), 0);
         return { month, budget: budgetTotal, actual: actualTotal };
       });
     });
     return result;
-  }, [budget, categories, transactions, selectedYear]);
+  }, [budget, categories, groupCategories, transactions, selectedYear]);
 
   // Top-level stats
   const stats = useMemo(() =>
@@ -176,17 +220,17 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
   // Donut data per group
   const donutData = useMemo(() => {
     const result = {};
-    ['Income','Expenses','Debt','Savings','Investments'].forEach(g => {
-      result[g] = (categories[g] || [])
+    DASHBOARD_GROUPS.forEach(g => {
+      result[g] = (groupCategories[g] || [])
         .map(cat => ({ name: cat, value: catActuals[g]?.[cat] || 0 }))
         .filter(d => d.value > 0);
     });
     return result;
-  }, [categories, catActuals]);
+  }, [groupCategories, catActuals]);
 
   const renderSection = (sec, idx) => {
     const { group, cssClass, label, accent } = sec;
-    const cats = categories[group] || [];
+    const cats = groupCategories[group] || [];
     const statRow = stats[idx];
     const monthlyData = monthlyByGroup[group];
     const pieData = donutData[group];

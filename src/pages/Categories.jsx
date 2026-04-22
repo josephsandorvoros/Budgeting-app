@@ -21,6 +21,10 @@ const CATEGORY_ICON_GROUPS = {
 
 const CATEGORY_EMOJIS = Array.from(new Set(Object.values(CATEGORY_ICON_GROUPS).flat()));
 
+function alphaSort(values = []) {
+  return [...values].sort((a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' }));
+}
+
 function makeGroupId() {
   return 'cg_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 }
@@ -28,7 +32,7 @@ function makeGroupId() {
 function defaultGrouping(categories) {
   const result = {};
   GROUPS.forEach((g) => {
-    result[g] = [{ id: makeGroupId(), name: g, categories: [...(categories[g] || [])] }];
+    result[g] = [{ id: makeGroupId(), name: g, categories: alphaSort(categories[g] || []) }];
   });
   return result;
 }
@@ -37,7 +41,7 @@ function normalizeGrouping(raw, categories) {
   const map = raw && typeof raw === 'object' ? JSON.parse(JSON.stringify(raw)) : defaultGrouping(categories);
 
   GROUPS.forEach((group) => {
-    const sourceCats = categories[group] || [];
+    const sourceCats = alphaSort(categories[group] || []);
     if (!Array.isArray(map[group]) || map[group].length === 0) {
       map[group] = [{ id: makeGroupId(), name: group, categories: [...sourceCats] }];
     }
@@ -47,7 +51,7 @@ function normalizeGrouping(raw, categories) {
       if (!g.id) g.id = makeGroupId();
       if (!g.name) g.name = 'Group';
       if (!Array.isArray(g.categories)) g.categories = [];
-      g.categories = g.categories.filter((c) => sourceCats.includes(c) && !seen.has(c));
+      g.categories = alphaSort(g.categories.filter((c) => !seen.has(c)));
       g.categories.forEach((c) => seen.add(c));
     });
 
@@ -283,7 +287,6 @@ export default function Categories({
         <div key={grp.id} className="sca-group-card">
           <div className="sca-group-head">
             <div className="sca-group-title-wrap">
-              <span className="sca-grip">⋮⋮</span>
               <span className="sca-group-title">{grp.name}</span>
             </div>
             <div className="sca-row-actions">
@@ -293,10 +296,9 @@ export default function Categories({
           </div>
 
           <div className="sca-group-body">
-            {grp.categories.map((cat) => (
+            {alphaSort(grp.categories).map((cat) => (
               <div key={cat} className="sca-item-row">
                 <div className="sca-item-main">
-                  <span className="sca-grip">⋮⋮</span>
                   <AppIcon
                     value={catMeta[catKey(major, cat)]?.emoji || defaultEmoji(major)}
                     fallback={defaultEmoji(major)}

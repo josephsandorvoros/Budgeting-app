@@ -2,7 +2,26 @@ import { useState, useMemo, useRef } from 'react';
 
 const GROUPS = ['Income', 'Expenses', 'Savings', 'Debt'];
 const TYPES  = ['income', 'expense', 'savings', 'debt'];
+const GROUP_BY_TYPE = {
+  income: 'Income',
+  expense: 'Expenses',
+  savings: 'Savings',
+  debt: 'Debt',
+};
 const fmtAbs = (n) => `$${Math.abs(Number(n)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+function sortAlpha(values = []) {
+  return [...values].sort((a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' }));
+}
+
+function categoriesForType(type, categories) {
+  const group = GROUP_BY_TYPE[type] || 'Expenses';
+  return sortAlpha(categories[group] || []);
+}
+
+function groupedCategoryOptions(categories) {
+  return GROUPS.map((group) => ({ group, items: sortAlpha(categories[group] || []) })).filter((entry) => entry.items.length > 0);
+}
 
 // ── Time period helpers ────────────────────────────────────────────────────
 const TIME_PERIODS = [
@@ -140,7 +159,8 @@ function SortTh({ col, sortCol, sortDir, onSort, children, style }) {
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function Expenses({ data, addTransaction, deleteTransaction, updateTransaction, importTransactions }) {
   const { transactions, categories } = data;
-  const allCategories = useMemo(() => GROUPS.flatMap(g => categories[g] || []), [categories]);
+  const allCategories = useMemo(() => sortAlpha(GROUPS.flatMap(g => categories[g] || [])), [categories]);
+  const groupedOptions = useMemo(() => groupedCategoryOptions(categories), [categories]);
 
   // Filters
   const [period,     setPeriod]     = useState('all');
@@ -228,7 +248,18 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
   // Form handlers
   const handleGroupChange = (e) => {
     const grp = e.target.value;
-    setForm(f => ({ ...f, group: grp, category: (categories[grp] || [])[0] || '' }));
+    setForm(f => ({ ...f, group: grp, category: sortAlpha(categories[grp] || [])[0] || '' }));
+  };
+
+  const handleTypeChange = (nextType) => {
+    const nextGroup = GROUP_BY_TYPE[nextType] || form.group;
+    const nextCats = categoriesForType(nextType, categories);
+    setForm((f) => ({
+      ...f,
+      type: nextType,
+      group: nextGroup,
+      category: nextCats.includes(f.category) ? f.category : (nextCats[0] || ''),
+    }));
   };
 
   const handleSubmit = (e) => {
@@ -378,12 +409,12 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
             </label>
             <label>Category
               <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                {(categories[form.group] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                {categoriesForType(form.type, categories).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
             <label>Amount ($)<input type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" required /></label>
             <label>Type
-              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+              <select value={form.type} onChange={e => handleTypeChange(e.target.value)}>
                 {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </label>
@@ -511,14 +542,31 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
                         {visibleCols.has('payee')    && <td><input type="text"  value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} className="tx-inline-input" style={{ width: '100%', minWidth: 140 }} /></td>}
                         {visibleCols.has('category') && <td>
                           <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} className="tx-inline-select">
-                            {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                            {groupedOptions.map(({ group, items }) => (
+                              <optgroup key={group} label={group}>
+                                {items.map(c => <option key={`${group}-${c}`} value={c}>{c}</option>)}
+                              </optgroup>
+                            ))}
                           </select>
                         </td>}
                         {visibleCols.has('amount') && <td style={{ textAlign: 'right' }}>
                           <input type="number" value={editForm.amount} min="0" step="0.01" onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} className="tx-inline-input" style={{ width: 90, textAlign: 'right' }} />
                         </td>}
                         {visibleCols.has('type') && <td>
-                          <select value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))} className="tx-inline-select">
+                          <select
+                            value={editForm.type}
+                            onChange={e => {
+                              const nextType = e.target.value;
+                              const nextCats = categoriesForType(nextType, categories);
+                              setEditForm(f => ({
+                                ...f,
+                                type: nextType,
+                                group: GROUP_BY_TYPE[nextType] || f.group,
+                                category: nextCats.includes(f.category) ? f.category : (nextCats[0] || ''),
+                              }));
+                            }}
+                            className="tx-inline-select"
+                          >
                             {TYPES.map(tp => <option key={tp} value={tp}>{tp}</option>)}
                           </select>
                         </td>}
