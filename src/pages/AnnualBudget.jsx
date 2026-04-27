@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, useMemo } from 'react';
+import { Fragment, useState, useMemo } from 'react';
 import { MONTHS } from '../data/defaults.js';
 
 const fmt = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -21,11 +21,6 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
     [budgetList, currentType]
   );
 
-  const sameTypeBudgets = useMemo(
-    () => Object.entries(allBudgets || {}).filter(([, budgetData]) => (budgetData?.type || 'personal') === currentType),
-    [allBudgets, currentType]
-  );
-
   const yearsWithData = useMemo(() => {
     const years = sameTypeBudgetList
       .map((b) => Number(b?.year))
@@ -38,15 +33,13 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
     : (yearsWithData[0] || currentYear);
   const [selectedYear, setSelectedYear] = useState(defaultYear);
 
-  useEffect(() => {
-    setSelectedYear(defaultYear);
-  }, [defaultYear]);
-
   const yearOptions = useMemo(() => {
     const years = Array.from(new Set([currentYear, ...yearsWithData]));
     years.sort((a, b) => b - a);
     return years.length ? years : [selectedYear];
   }, [yearsWithData, selectedYear, currentYear]);
+
+  const selectedYearValue = yearOptions.includes(selectedYear) ? selectedYear : defaultYear;
 
   const handleYearChange = (nextYear) => {
     const y = Number(nextYear);
@@ -56,9 +49,9 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
   };
 
   const activeBudgetMeta = useMemo(() => {
-    if (Number(currentBudget?.year) === Number(selectedYear)) return currentBudget;
-    return sameTypeBudgetList.find((b) => Number(b?.year) === Number(selectedYear)) || null;
-  }, [currentBudget, sameTypeBudgetList, selectedYear]);
+    if (Number(currentBudget?.year) === Number(selectedYearValue)) return currentBudget;
+    return sameTypeBudgetList.find((b) => Number(b?.year) === Number(selectedYearValue)) || null;
+  }, [currentBudget, sameTypeBudgetList, selectedYearValue]);
 
   const emptyData = useMemo(() => {
     const sourceCategories = data.categories || {};
@@ -121,16 +114,16 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
       <div className="page-heading">
         <div className="page-heading-left">
           <h1>Annual Budget</h1>
-          <span className="page-heading-sub">{selectedYear}</span>
+          <span className="page-heading-sub">{selectedYearValue}</span>
         </div>
         <div className="month-selector">
-          <select value={selectedYear} onChange={(e) => handleYearChange(e.target.value)}>
+          <select value={selectedYearValue} onChange={(e) => handleYearChange(e.target.value)}>
             {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
       </div>
       <p className="subtitle">
-        {canEdit ? 'Click any cell to edit. Changes are saved automatically.' : `No ${currentType} budget exists for ${selectedYear}. Showing an empty annual view.`}
+        {canEdit ? 'Click any cell to edit. Changes are saved automatically.' : `No ${currentType} budget exists for ${selectedYearValue}. Showing an empty annual view.`}
       </p>
 
       <div className="table-wrapper">

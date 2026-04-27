@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import IconPicker from '../components/IconPicker.jsx';
 import AppIcon from '../components/AppIcon.jsx';
 import { loadAppSetting, saveAppSetting } from '../utils/appSettings.js';
@@ -86,17 +86,16 @@ export default function Categories({
   const [editingGroup, setEditingGroup] = useState(null);
   const [groupDraft, setGroupDraft] = useState('');
   const [catMeta, setCatMeta] = useState({});
-  const [groupingLoaded, setGroupingLoaded] = useState(false);
-  const [catMetaLoaded, setCatMetaLoaded] = useState(false);
+  const [groupingLoadedKey, setGroupingLoadedKey] = useState(null);
+  const [catMetaLoadedKey, setCatMetaLoadedKey] = useState(null);
   const currentBudget = budgetList.find(b => b.id === currentId);
 
   useEffect(() => {
     let cancelled = false;
-    setGroupingLoaded(false);
     loadAppSetting(storageKey, null, storageKey).then((raw) => {
       if (!cancelled) {
         setGrouping(normalizeGrouping(raw, categories));
-        setGroupingLoaded(true);
+        setGroupingLoadedKey(storageKey);
       }
     });
     return () => {
@@ -105,19 +104,18 @@ export default function Categories({
   }, [storageKey, categories]);
 
   useEffect(() => {
-    if (!groupingLoaded) return;
+    if (groupingLoadedKey !== storageKey) return;
     saveAppSetting(storageKey, grouping).catch(() => {
       /* ignore persistence errors */
     });
-  }, [grouping, storageKey, groupingLoaded]);
+  }, [grouping, storageKey, groupingLoadedKey]);
 
   useEffect(() => {
     let cancelled = false;
-    setCatMetaLoaded(false);
     loadAppSetting(metaKey, {}, metaKey).then((value) => {
       if (!cancelled) {
         setCatMeta(value || {});
-        setCatMetaLoaded(true);
+        setCatMetaLoadedKey(metaKey);
       }
     });
     return () => {
@@ -126,11 +124,11 @@ export default function Categories({
   }, [metaKey]);
 
   useEffect(() => {
-    if (!catMetaLoaded) return;
+    if (catMetaLoadedKey !== metaKey) return;
     saveAppSetting(metaKey, catMeta).catch(() => {
       /* ignore persistence errors */
     });
-  }, [catMeta, metaKey, catMetaLoaded]);
+  }, [catMeta, metaKey, catMetaLoadedKey]);
 
   const catKey = (major, category) => `${major}::${category}`;
   const defaultEmoji = (major) => {

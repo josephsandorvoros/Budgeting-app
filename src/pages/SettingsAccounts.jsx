@@ -56,7 +56,7 @@ export default function SettingsAccounts({
   onSwitchBudget,
   onNavigateSettings,
 }) {
-  const accounts = data.accounts || [];
+  const accounts = useMemo(() => data.accounts || [], [data.accounts]);
   const groupsKey = `account_groups_v1_${currentId}`;
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState(null);
@@ -69,8 +69,8 @@ export default function SettingsAccounts({
   const [customInstitution, setCustomInstitution] = useState('');
   const [useCustomInstitution, setUseCustomInstitution] = useState(false);
   const [institutionOptions, setInstitutionOptions] = useState([...INSTITUTIONS]);
-  const [subtypesLoaded, setSubtypesLoaded] = useState(false);
-  const [metaLoaded, setMetaLoaded] = useState(false);
+  const [subtypesLoadedKey, setSubtypesLoadedKey] = useState(null);
+  const [metaLoadedKey, setMetaLoadedKey] = useState(null);
   const [institutionsLoaded, setInstitutionsLoaded] = useState(false);
 
   const metaKey = `account_meta_v1_${currentId}`;
@@ -78,11 +78,10 @@ export default function SettingsAccounts({
 
   useEffect(() => {
     let cancelled = false;
-    setSubtypesLoaded(false);
     loadAppSetting(groupsKey, null, groupsKey).then((stored) => {
       if (!cancelled) {
         setSubtypes(makeSubtypeList(accounts, stored));
-        setSubtypesLoaded(true);
+        setSubtypesLoadedKey(groupsKey);
       }
     });
     return () => {
@@ -92,11 +91,10 @@ export default function SettingsAccounts({
 
   useEffect(() => {
     let cancelled = false;
-    setMetaLoaded(false);
     loadAppSetting(metaKey, {}, metaKey).then((stored) => {
       if (!cancelled) {
         setAccountMeta(stored || {});
-        setMetaLoaded(true);
+        setMetaLoadedKey(metaKey);
       }
     });
     return () => {
@@ -106,7 +104,6 @@ export default function SettingsAccounts({
 
   useEffect(() => {
     let cancelled = false;
-    setInstitutionsLoaded(false);
     loadAppSetting('institution_options_v1', [], 'institution_options_v1').then((stored) => {
       if (!cancelled) {
         setInstitutionOptions(Array.from(new Set([...INSTITUTIONS, ...(stored || [])])));
@@ -119,18 +116,18 @@ export default function SettingsAccounts({
   }, []);
 
   useEffect(() => {
-    if (!subtypesLoaded) return;
+    if (subtypesLoadedKey !== groupsKey) return;
     saveAppSetting(groupsKey, subtypes).catch(() => {
       /* ignore persistence errors */
     });
-  }, [subtypes, groupsKey, subtypesLoaded]);
+  }, [subtypes, groupsKey, subtypesLoadedKey]);
 
   useEffect(() => {
-    if (!metaLoaded) return;
+    if (metaLoadedKey !== metaKey) return;
     saveAppSetting(metaKey, accountMeta).catch(() => {
       /* ignore persistence errors */
     });
-  }, [accountMeta, metaKey, metaLoaded]);
+  }, [accountMeta, metaKey, metaLoadedKey]);
 
   useEffect(() => {
     if (!institutionsLoaded) return;

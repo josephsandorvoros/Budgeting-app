@@ -35,7 +35,7 @@ function EditableCell({ value, onSave }) {
   );
 }
 
-export default function BalanceSheet({ data, updateAccountBalance, updateAccountStartBalance, addAccount, deleteAccount }) {
+export default function BalanceSheet({ data, updateAccountBalance, updateAccountStartBalance, addAccount }) {
   const accounts = data.accounts || [];
   const [collapsed, setCollapsed] = useState({});
   const [showAddModal, setShowAddModal] = useState(false);
@@ -66,8 +66,6 @@ export default function BalanceSheet({ data, updateAccountBalance, updateAccount
   const assetTotal = (monthIdx) => classTotal('ASSETS', monthIdx);
   const liabTotal  = (monthIdx) => classTotal('LIABILITIES', monthIdx);
   const netWorth   = (monthIdx) => assetTotal(monthIdx) - liabTotal(monthIdx);
-
-  const allSubtypes = [...ACCOUNT_HIERARCHY.ASSETS, ...ACCOUNT_HIERARCHY.LIABILITIES];
 
   return (
     <div className="page bs-page">

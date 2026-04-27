@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -85,15 +85,13 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
   const defaultYear = yearsWithData[0] || currentYear;
   const [selectedYear, setSelectedYear] = useState(defaultYear);
 
-  useEffect(() => {
-    setSelectedYear(defaultYear);
-  }, [defaultYear]);
-
   const yearOptions = useMemo(() => {
     const years = Array.from(new Set([currentYear, ...yearsWithData]));
     years.sort((a, b) => b - a);
     return years.length ? years : [selectedYear];
   }, [yearsWithData, selectedYear, currentYear]);
+
+  const selectedYearValue = yearOptions.includes(selectedYear) ? selectedYear : defaultYear;
 
   const handleYearChange = (nextYear) => {
     const y = Number(nextYear);
@@ -104,12 +102,12 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
   };
 
   const activeBudgetMeta = useMemo(() => {
-    if ((data.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(selectedYear))) return currentBudget;
+    if ((data.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(selectedYearValue))) return currentBudget;
     const match = sameTypeBudgets
-      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(selectedYear)));
+      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(selectedYearValue)));
     if (!match) return null;
     return budgetList.find((b) => b.id === match[0]) || null;
-  }, [data.transactions, currentBudget, sameTypeBudgets, selectedYear, budgetList]);
+  }, [data.transactions, currentBudget, sameTypeBudgets, selectedYearValue, budgetList]);
 
   const emptyData = useMemo(() => {
     const sourceCategories = data.categories || {};
@@ -134,8 +132,8 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
 
   const { budget, categories, transactions } = effectiveData;
   const filteredTransactions = useMemo(
-    () => (transactions || []).filter((t) => new Date(t.date).getFullYear() === Number(selectedYear)),
-    [transactions, selectedYear]
+    () => (transactions || []).filter((t) => new Date(t.date).getFullYear() === Number(selectedYearValue)),
+    [transactions, selectedYearValue]
   );
 
   const categoryGroupIndex = useMemo(() => {
@@ -196,7 +194,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
           .filter(t => {
             const d = new Date(t.date);
             return d.getMonth() === mIdx
-              && d.getFullYear() === Number(selectedYear)
+              && d.getFullYear() === Number(selectedYearValue)
               && resolveCategoryGroup(t, categoryGroupIndex) === g
               && categoryKeys.has(normalizeCategoryKey(t.category));
           })
@@ -205,7 +203,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
       });
     });
     return result;
-  }, [budget, categoryGroupIndex, groupCategories, transactions, selectedYear]);
+  }, [budget, categoryGroupIndex, groupCategories, transactions, selectedYearValue]);
 
   // Top tiles: pure transaction-type totals
   const topActualByGroup = useMemo(() => {
@@ -517,10 +515,10 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
       <div className="page-heading">
         <div className="page-heading-left">
           <h1>Annual Dashboard</h1>
-          <span className="page-heading-sub">{selectedYear} Budget Overview</span>
+          <span className="page-heading-sub">{selectedYearValue} Budget Overview</span>
         </div>
         <div className="month-selector">
-          <select value={selectedYear} onChange={(e) => handleYearChange(e.target.value)}>
+          <select value={selectedYearValue} onChange={(e) => handleYearChange(e.target.value)}>
             {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>

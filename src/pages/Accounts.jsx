@@ -7,12 +7,6 @@ const fmtAbs = (v) => {
   return `$${Math.abs(Number(v)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const fmtSigned = (v) => {
-  if (v == null) return '—';
-  const abs = Math.abs(Number(v)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return v < 0 ? `$(${abs})` : `$${abs}`;
-};
-
 // ── Time period helpers ────────────────────────────────────────────────────
 const TIME_PERIODS = [
   { label: 'All Time',      value: 'all' },
@@ -63,8 +57,8 @@ function SortTh({ col, sortCol, sortDir, onSort, children, style }) {
 }
 
 export default function Accounts({ data, updateTransaction }) {
-  const accounts    = data.accounts || [];
-  const transactions = data.transactions || [];
+  const accounts = useMemo(() => data.accounts || [], [data.accounts]);
+  const transactions = useMemo(() => data.transactions || [], [data.transactions]);
 
   // Left tree state
   const [selectedAccount, setSelectedAccount]   = useState(null);

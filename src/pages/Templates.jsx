@@ -42,13 +42,20 @@ export default function Templates({
   const [keepTransactions, setKeepTransactions] = useState(true);
 
   useEffect(() => {
-    if (!templates?.length) {
-      setSelectedId('');
-      return;
-    }
-    if (!selectedId || !templates.some(t => t.id === selectedId)) {
-      setSelectedId(templates[0].id);
-    }
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      if (!templates?.length) {
+        setSelectedId('');
+        return;
+      }
+      if (!selectedId || !templates.some(t => t.id === selectedId)) {
+        setSelectedId(templates[0].id);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [templates, selectedId]);
 
   const selected = useMemo(
@@ -58,10 +65,17 @@ export default function Templates({
 
   useEffect(() => {
     if (!selected) return;
-    setApplyName(`${selected.name} Budget`);
-    setApplyType(selected.type || 'personal');
-    setEditName(selected.name || '');
-    setEditDesc(selected.description || '');
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setApplyName(`${selected.name} Budget`);
+      setApplyType(selected.type || 'personal');
+      setEditName(selected.name || '');
+      setEditDesc(selected.description || '');
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [selected]);
 
   const stats = summarizeTemplate(selected);

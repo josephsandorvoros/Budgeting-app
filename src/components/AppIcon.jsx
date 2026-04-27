@@ -52,7 +52,7 @@ function getReactIconSpec(value) {
   return entry ? { exportName: text, loader: entry.load } : null;
 }
 
-export function getIconImageSource(value) {
+function getIconImageSource(value) {
   const text = String(value || '').trim();
   if (!text) return null;
   if (isSvgMarkup(text)) return svgToDataUrl(text);
@@ -60,41 +60,42 @@ export function getIconImageSource(value) {
   return null;
 }
 
-export function isVisualIcon(value) {
-  return !!getIconImageSource(value);
-}
-
 export default function AppIcon({ value, fallback = '🏷️', className = '', label = 'icon' }) {
   const resolved = useMemo(() => String(value || '').trim() || fallback, [value, fallback]);
   const source = useMemo(() => getIconImageSource(resolved), [resolved]);
   const iconSpec = useMemo(() => getReactIconSpec(resolved), [resolved]);
-  const [IconComponent, setIconComponent] = useState(null);
+  const [loadedIcon, setLoadedIcon] = useState({ exportName: '', component: null });
 
   useEffect(() => {
     let cancelled = false;
 
     if (!iconSpec) {
-      setIconComponent(null);
       return () => {
         cancelled = true;
       };
     }
 
-    setIconComponent(null);
-
     iconSpec.loader()
       .then((mod) => {
         const component = mod?.[iconSpec.exportName] || null;
-        if (!cancelled) setIconComponent(() => component);
+        if (!cancelled) {
+          setLoadedIcon({ exportName: iconSpec.exportName, component });
+        }
       })
       .catch(() => {
-        if (!cancelled) setIconComponent(null);
+        if (!cancelled) {
+          setLoadedIcon({ exportName: iconSpec.exportName, component: null });
+        }
       });
 
     return () => {
       cancelled = true;
     };
   }, [iconSpec]);
+
+  const IconComponent = iconSpec && loadedIcon.exportName === iconSpec.exportName
+    ? loadedIcon.component
+    : null;
 
   if (source) {
     return (

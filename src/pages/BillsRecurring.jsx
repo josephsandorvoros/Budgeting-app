@@ -141,9 +141,8 @@ function BillModal({ bill, categories, accounts, onSave, onClose }) {
 }
 
 export default function BillsRecurring({ data, addBill, updateBill, deleteBill }) {
-  const bills = data.bills || [];
-  const transactions = data.transactions || [];
-  const accounts = data.accounts || [];
+  const bills = useMemo(() => data.bills || [], [data.bills]);
+  const accounts = useMemo(() => data.accounts || [], [data.accounts]);
   const [showModal, setShowModal] = useState(false);
   const [editingBill, setEditingBill] = useState(null);
 

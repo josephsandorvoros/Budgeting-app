@@ -96,9 +96,9 @@ export default function IconPicker({
   const [favorites, setFavorites] = useState([]);
   const [recent, setRecent] = useState([]);
   const [customIcons, setCustomIcons] = useState([]);
-  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
-  const [recentLoaded, setRecentLoaded] = useState(false);
-  const [customLoaded, setCustomLoaded] = useState(false);
+  const [favoritesLoadedKey, setFavoritesLoadedKey] = useState(null);
+  const [recentLoadedKey, setRecentLoadedKey] = useState(null);
+  const [customLoadedKey, setCustomLoadedKey] = useState(null);
 
   const customEntries = useMemo(
     () => customIcons.map((emoji) => ({ emoji, keywords: customKeywordsForValue(emoji) })),
@@ -120,11 +120,10 @@ export default function IconPicker({
 
   useEffect(() => {
     let cancelled = false;
-    setFavoritesLoaded(false);
     loadAppSetting(`${storageKey}_favorites`, [], `${storageKey}_favorites`).then((value) => {
       if (!cancelled) {
         setFavorites(Array.isArray(value) ? value : []);
-        setFavoritesLoaded(true);
+        setFavoritesLoadedKey(storageKey);
       }
     });
     return () => {
@@ -134,11 +133,10 @@ export default function IconPicker({
 
   useEffect(() => {
     let cancelled = false;
-    setRecentLoaded(false);
     loadAppSetting(`${storageKey}_recent`, [], `${storageKey}_recent`).then((value) => {
       if (!cancelled) {
         setRecent(Array.isArray(value) ? value : []);
-        setRecentLoaded(true);
+        setRecentLoadedKey(storageKey);
       }
     });
     return () => {
@@ -148,11 +146,10 @@ export default function IconPicker({
 
   useEffect(() => {
     let cancelled = false;
-    setCustomLoaded(false);
     loadAppSetting(`${storageKey}_custom`, [], `${storageKey}_custom`).then((value) => {
       if (!cancelled) {
         setCustomIcons(Array.isArray(value) ? value : []);
-        setCustomLoaded(true);
+        setCustomLoadedKey(storageKey);
       }
     });
     return () => {
@@ -161,28 +158,28 @@ export default function IconPicker({
   }, [storageKey]);
 
   useEffect(() => {
-    if (!favoritesLoaded) return;
+    if (favoritesLoadedKey !== storageKey) return;
     saveAppSetting(`${storageKey}_favorites`, favorites).catch(() => {
       /* ignore persistence errors */
     });
-  }, [favorites, storageKey, favoritesLoaded]);
+  }, [favorites, storageKey, favoritesLoadedKey]);
 
   useEffect(() => {
-    if (!recentLoaded) return;
+    if (recentLoadedKey !== storageKey) return;
     saveAppSetting(`${storageKey}_recent`, recent).catch(() => {
       /* ignore persistence errors */
     });
-  }, [recent, storageKey, recentLoaded]);
+  }, [recent, storageKey, recentLoadedKey]);
 
   useEffect(() => {
-    if (!customLoaded) return;
+    if (customLoadedKey !== storageKey) return;
     saveAppSetting(`${storageKey}_custom`, customIcons).catch(() => {
       /* ignore persistence errors */
     });
-  }, [customIcons, storageKey, customLoaded]);
+  }, [customIcons, storageKey, customLoadedKey]);
 
   useEffect(() => {
-    if (!customLoaded) return;
+    if (customLoadedKey !== storageKey) return;
 
     const seeds = [value, ...favorites, ...recent]
       .map(normalizeCustomIconValue)
@@ -190,19 +187,27 @@ export default function IconPicker({
 
     if (!seeds.length) return;
 
-    setCustomIcons((prev) => {
-      const next = [...prev];
-      let changed = false;
-      seeds.forEach((icon) => {
-        if (!next.includes(icon) && !options.includes(icon)) {
-          next.unshift(icon);
-          changed = true;
-        }
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setCustomIcons((prev) => {
+        const next = [...prev];
+        let changed = false;
+        seeds.forEach((icon) => {
+          if (!next.includes(icon) && !options.includes(icon)) {
+            next.unshift(icon);
+            changed = true;
+          }
+        });
+        if (!changed) return prev;
+        return next.slice(0, 150);
       });
-      if (!changed) return prev;
-      return next.slice(0, 150);
     });
-  }, [value, favorites, recent, options, customLoaded]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [value, favorites, recent, options, storageKey, customLoadedKey]);
 
   const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
   const recentSet = useMemo(() => new Set(recent), [recent]);

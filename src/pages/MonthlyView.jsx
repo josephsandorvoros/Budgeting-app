@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -46,14 +46,11 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
   const defaultYear = yearsWithData[0] || currentYear;
   const [year, setYear]         = useState(defaultYear);
 
-  useEffect(() => {
-    setYear(defaultYear);
-  }, [defaultYear]);
-
   const years = useMemo(() => {
     const set = new Set([currentYear, ...yearsWithData]);
     return Array.from(set).sort((a, b) => b - a);
   }, [yearsWithData, currentYear]);
+  const yearValue = years.includes(year) ? year : defaultYear;
   const monthName = MONTHS[monthIdx];
 
   const handleYearChange = (nextYear) => {
@@ -65,12 +62,12 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
   };
 
   const activeBudgetMeta = useMemo(() => {
-    if ((data.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(year))) return currentBudget;
+    if ((data.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(yearValue))) return currentBudget;
     const match = sameTypeBudgets
-      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(year)));
+      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(yearValue)));
     if (!match) return null;
     return budgetList.find((b) => b.id === match[0]) || null;
-  }, [data.transactions, currentBudget, sameTypeBudgets, year, budgetList]);
+  }, [data.transactions, currentBudget, sameTypeBudgets, yearValue, budgetList]);
 
   const emptyData = useMemo(() => {
     const sourceCategories = data.categories || {};
@@ -105,13 +102,13 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
         result[g][cat] = transactions
           .filter(t => {
             const d = new Date(t.date);
-            return d.getMonth() === monthIdx && d.getFullYear() === year && t.category === cat;
+            return d.getMonth() === monthIdx && d.getFullYear() === yearValue && t.category === cat;
           })
           .reduce((s, t) => s + Number(t.amount), 0);
       });
     });
     return result;
-  }, [transactions, categories, monthIdx, year]);
+  }, [transactions, categories, monthIdx, yearValue]);
 
   // Monthly totals per group
   const groupStats = useMemo(() =>
@@ -135,7 +132,7 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
       expWant:       sum('Expenses', c => !CATEGORY_META.Expenses?.[c]?.need),
       subscriptions: transactions.filter(t => {
         const d = new Date(t.date);
-        return d.getMonth() === monthIdx && d.getFullYear() === year && t.subscription;
+        return d.getMonth() === monthIdx && d.getFullYear() === yearValue && t.subscription;
       }).reduce((s, t) => s + Number(t.amount), 0),
       debtHigh: sum('Debt',    c => CATEGORY_META.Debt?.[c]?.highPriority),
       debtLow:  sum('Debt',    c => !CATEGORY_META.Debt?.[c]?.highPriority),
@@ -144,7 +141,7 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
       invGrowth: sum('Investments', c => CATEGORY_META.Investments?.[c]?.growth),
       invCrypto: sum('Investments', c => !CATEGORY_META.Investments?.[c]?.growth),
     };
-  }, [categories, catActuals, transactions, monthIdx, year]);
+  }, [categories, catActuals, transactions, monthIdx, yearValue]);
 
   const catBarData = (group) =>
     (categories[group] || []).map(cat => ({
@@ -166,20 +163,20 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
       <div className="page-heading">
         <div className="page-heading-left">
           <h1>Monthly Budget</h1>
-          <span className="page-heading-sub">{monthName} {year}</span>
+          <span className="page-heading-sub">{monthName} {yearValue}</span>
         </div>
         <div className="month-selector">
           <select value={monthIdx} onChange={e => setMonthIdx(Number(e.target.value))}>
             {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
           </select>
-          <select value={year} onChange={e => handleYearChange(e.target.value)}>
+          <select value={yearValue} onChange={e => handleYearChange(e.target.value)}>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
       </div>
 
       {!hasSelectedBudget && (
-        <div className="subtitle">No {currentType} budget exists for {year}. Showing an empty monthly view.</div>
+        <div className="subtitle">No {currentType} budget exists for {yearValue}. Showing an empty monthly view.</div>
       )}
 
       {/* Stat tiles */}
