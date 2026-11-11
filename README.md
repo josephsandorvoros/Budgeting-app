@@ -103,6 +103,9 @@ Go to Settings -> Updates to:
 
 You can run the new installer over the existing install to update in place (no manual uninstall required).
 
+Installers contain the source at their release tag, not the current `main` branch.
+Changes pushed to `main` need a new tagged release before they appear in downloaded installers.
+
 ## CI Installers
 
 Native multi-platform installer builds are configured in:
@@ -135,6 +138,9 @@ To trigger automated installer + release publishing, push the tag from local:
 
 Note:
     Bump package.json version for every release you publish.
+    Keep package-lock.json in sync (for example, run npm version patch --no-git-tag-version).
+    Update package.json releaseTag for local builds; tagged CI builds stamp it automatically.
+    Commit and push your changes before creating the release tag.
     Keep using beta tags for release channels (beta1.8, beta1.9, etc.).
     Use semantic versions like:
     1.0.1 for fixes
@@ -142,8 +148,8 @@ Note:
     2.0.0 for breaking changes
 
 ```
-git tag beta1.26
-git push origin beta1.26
+git tag beta1.27
+git push origin beta1.27
 ```
 
 ✓ Workflow triggers, builds installers, and publishes the release automatically

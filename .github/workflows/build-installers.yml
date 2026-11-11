@@ -46,6 +46,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Stamp packaged release identity
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: npm pkg set "releaseTag=$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+
       - name: Install backend build dependencies
         run: |
           python -m pip install --upgrade pip
