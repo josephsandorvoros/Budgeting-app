@@ -1,9 +1,41 @@
-const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI;
-const IS_PACKAGED_ELECTRON = IS_ELECTRON && typeof window !== 'undefined' && window.location?.protocol === 'file:';
+import { resolveDemoMode } from '../data/demo.js';
 
-const API_BASE = IS_ELECTRON
-  ? (IS_PACKAGED_ELECTRON ? 'http://127.0.0.1:18765/api' : 'http://127.0.0.1:8765/api')
-  : '/api';
+const DEMO_SETTINGS_STORAGE_PREFIX = 'budget_ledger_demo_settings_v1:';
+
+function getWindow() {
+  return typeof window !== 'undefined' ? window : undefined;
+}
+
+function getStorage() {
+  return typeof localStorage !== 'undefined' ? localStorage : undefined;
+}
+
+function getApiBase() {
+  const win = getWindow();
+  const isElectron = Boolean(win?.electronAPI);
+  const isPackagedElectron = isElectron && win?.location?.protocol === 'file:';
+  if (!isElectron) return '/api';
+  return isPackagedElectron ? 'http://127.0.0.1:18765/api' : 'http://127.0.0.1:8765/api';
+}
+
+function getViteDemoMode() {
+  const viteEnv = typeof import.meta !== 'undefined' ? import.meta.env : undefined;
+  if (viteEnv) return viteEnv.VITE_DEMO_MODE;
+  return globalThis.process?.env?.VITE_DEMO_MODE;
+}
+
+function shouldUseDemoMode() {
+  const win = getWindow();
+  return resolveDemoMode({
+    viteDemoMode: getViteDemoMode(),
+    hasElectronAPI: Boolean(win?.electronAPI),
+    protocol: win?.location?.protocol || '',
+  });
+}
+
+function demoStorageKey(key) {
+  return `${DEMO_SETTINGS_STORAGE_PREFIX}${key}`;
+}
 
 function parseStoredValue(raw, fallback) {
   if (raw === null || raw === undefined) return fallback;
@@ -16,8 +48,19 @@ function parseStoredValue(raw, fallback) {
 
 export async function saveAppSetting(key, value) {
   const serialized = JSON.stringify(value);
+  if (shouldUseDemoMode()) {
+    try {
+      const storage = getStorage();
+      if (!storage) throw new Error('Storage unavailable');
+      storage.setItem(demoStorageKey(key), serialized);
+      return;
+    } catch {
+      throw new Error(`Failed to save setting ${key}`);
+    }
+  }
+
   try {
-    const res = await fetch(`${API_BASE}/settings/${encodeURIComponent(key)}`, {
+    const res = await fetch(`${getApiBase()}/settings/${encodeURIComponent(key)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value: serialized }),
@@ -27,7 +70,9 @@ export async function saveAppSetting(key, value) {
   } catch {
     // Electron/offline fallback: keep settings sticky even if API is unavailable.
     try {
-      localStorage.setItem(key, serialized);
+      const storage = getStorage();
+      if (!storage) throw new Error('Storage unavailable');
+      storage.setItem(key, serialized);
       return;
     } catch {
       throw new Error(`Failed to save setting ${key}`);
@@ -36,8 +81,19 @@ export async function saveAppSetting(key, value) {
 }
 
 export async function loadAppSetting(key, fallback, legacyLocalKey = key) {
+  if (shouldUseDemoMode()) {
+    try {
+      const storage = getStorage();
+      if (!storage) return fallback;
+      const raw = storage.getItem(demoStorageKey(key));
+      return parseStoredValue(raw, fallback);
+    } catch {
+      return fallback;
+    }
+  }
+
   try {
-    const res = await fetch(`${API_BASE}/settings/${encodeURIComponent(key)}`);
+    const res = await fetch(`${getApiBase()}/settings/${encodeURIComponent(key)}`);
     if (res.ok) {
       const body = await res.json();
       if (body.value !== null && body.value !== undefined) {
@@ -49,7 +105,9 @@ export async function loadAppSetting(key, fallback, legacyLocalKey = key) {
   }
 
   try {
-    const localRaw = localStorage.getItem(legacyLocalKey);
+    const storage = getStorage();
+    if (!storage) return fallback;
+    const localRaw = storage.getItem(legacyLocalKey);
     if (localRaw !== null) {
       const parsed = parseStoredValue(localRaw, fallback);
       try {

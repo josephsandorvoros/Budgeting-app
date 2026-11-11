@@ -4,6 +4,19 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { MONTHS, CATEGORY_META } from '../data/defaults.js';
+import UiShellIcon from '../components/UiShellIcon.jsx';
+import {
+  DASHBOARD_GROUPS,
+  buildCategoryGroupIndex,
+  resolveTypeGroup,
+  resolveCategoryGroup,
+  budgetYears,
+  yearOptionsFor,
+  defaultYearFor,
+  budgetMetaForYear,
+  computeMonthOverview,
+  suggestNextActions,
+} from '../components/UiShellBudgetSelection.js';
 
 const SECTIONS = [
   { group: 'Income',      cssClass: 'income',      label: 'INCOME',      accent: '#4ade80', displayLabel: 'Total Income',      overLabel: 'income' },
@@ -24,90 +37,52 @@ const fmtShort = (v) => {
 const normalizeAmount = (v) => Math.abs(Number(v) || 0);
 
 const CHART_COLORS = ['#4ade80','#ec4899','#a855f7','#eab308','#60a5fa','#f97316','#34d399','#f43f5e','#818cf8','#fb923c'];
-const DASHBOARD_GROUPS = ['Income','Expenses','Debt','Savings','Investments'];
 
-const normalizeCategoryKey = (value) => String(value || '').trim().toLowerCase();
-
-function normalizeGroupName(value) {
-  const key = String(value || '').trim().toLowerCase();
-  if (!key) return undefined;
-  if (key === 'income' || key === 'in') return 'Income';
-  if (key === 'expense' || key === 'expenses' || key === 'out') return 'Expenses';
-  if (key === 'saving' || key === 'savings') return 'Savings';
-  if (key === 'debt') return 'Debt';
-  if (key === 'investment' || key === 'investments') return 'Investments';
-  if (key === 'transfer' || key === 'transfers') return null;
-  return undefined;
-}
-
-function resolveTypeGroup(tx) {
-  const typeBased = normalizeGroupName(tx?.type);
-  if (typeBased !== undefined) return typeBased;
-
-  const explicit = normalizeGroupName(tx?.group || tx?.group_name);
-  if (explicit !== undefined) return explicit;
-
-  return undefined;
-}
-
-function resolveCategoryGroup(tx, categoryGroupIndex = {}) {
-  const categoryName = normalizeCategoryKey(tx?.category);
-  if (categoryName && categoryGroupIndex[categoryName]) return categoryGroupIndex[categoryName];
-
-  const explicit = normalizeGroupName(tx?.group || tx?.group_name);
-  if (explicit !== undefined) return explicit;
-
-  return undefined;
-}
-
-export default function Dashboard({ data, allBudgets = {}, budgetList = [], currentId, onSwitchBudget }) {
+export default function Dashboard({ data, allBudgets = {}, budgetList = [], currentId, onSwitchBudget, setPage, setInitialMonth }) {
   const currentYear = new Date().getFullYear();
+  const currentMonthIndex = new Date().getMonth();
 
   const currentBudget = useMemo(
     () => budgetList.find((b) => b.id === currentId),
     [budgetList, currentId]
   );
   const currentType = currentBudget?.type || 'personal';
-  const sameTypeBudgets = useMemo(
-    () => Object.entries(allBudgets || {}).filter(([, budgetData]) => (budgetData?.type || 'personal') === currentType),
-    [allBudgets, currentType]
+  const sameTypeBudgetList = useMemo(
+    () => (budgetList || []).filter((b) => (b?.type || 'personal') === currentType),
+    [budgetList, currentType]
   );
 
-  const yearsWithData = useMemo(() => {
-    const years = sameTypeBudgets.flatMap(([, budgetData]) =>
-      (budgetData?.transactions || [])
-        .map((t) => new Date(t.date).getFullYear())
-        .filter(Number.isFinite)
-    );
-    return Array.from(new Set(years)).sort((a, b) => b - a);
-  }, [sameTypeBudgets]);
+  const metadataYears = useMemo(() => budgetYears(sameTypeBudgetList), [sameTypeBudgetList]);
 
-  const defaultYear = yearsWithData[0] || currentYear;
-  const [selectedYear, setSelectedYear] = useState(defaultYear);
+  const fallbackYear = useMemo(
+    () => defaultYearFor({ budgetList: sameTypeBudgetList, currentId, currentYear }),
+    [sameTypeBudgetList, currentId, currentYear]
+  );
+  const [selectedYear, setSelectedYear] = useState(fallbackYear);
 
-  const yearOptions = useMemo(() => {
-    const years = Array.from(new Set([currentYear, ...yearsWithData]));
-    years.sort((a, b) => b - a);
-    return years.length ? years : [selectedYear];
-  }, [yearsWithData, selectedYear, currentYear]);
+  const yearOptions = useMemo(
+    () => yearOptionsFor(metadataYears, currentYear),
+    [metadataYears, currentYear]
+  );
 
-  const selectedYearValue = yearOptions.includes(selectedYear) ? selectedYear : defaultYear;
+  const selectedYearValue = yearOptions.includes(selectedYear) ? selectedYear : fallbackYear;
+
+  const [selectedMonth, setSelectedMonth] = useState(
+    selectedYearValue === currentYear ? currentMonthIndex : 0
+  );
 
   const handleYearChange = (nextYear) => {
     const y = Number(nextYear);
     setSelectedYear(y);
-    const target = sameTypeBudgets
-      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === y))?.[0];
-    if (target && target !== currentId) onSwitchBudget(target);
+    setSelectedMonth(y === currentYear ? currentMonthIndex : 0);
+    const meta = budgetMetaForYear({ budgetList: sameTypeBudgetList, currentId, year: y });
+    if (meta && meta.id !== currentId) onSwitchBudget(meta.id);
   };
 
-  const activeBudgetMeta = useMemo(() => {
-    if ((data.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(selectedYearValue))) return currentBudget;
-    const match = sameTypeBudgets
-      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(selectedYearValue)));
-    if (!match) return null;
-    return budgetList.find((b) => b.id === match[0]) || null;
-  }, [data.transactions, currentBudget, sameTypeBudgets, selectedYearValue, budgetList]);
+  const activeBudgetMeta = useMemo(
+    () => budgetMetaForYear({ budgetList: sameTypeBudgetList, currentId, year: selectedYearValue }),
+    [sameTypeBudgetList, currentId, selectedYearValue]
+  );
 
   const emptyData = useMemo(() => {
     const sourceCategories = data.categories || {};
@@ -122,6 +97,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
       categories: sourceCategories,
       budget: zeroBudget,
       transactions: [],
+      bills: [],
     };
   }, [data.categories]);
 
@@ -130,22 +106,16 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     return (activeBudgetMeta && allBudgets[activeBudgetMeta.id]) || emptyData;
   }, [activeBudgetMeta, currentId, data, allBudgets, emptyData]);
 
-  const { budget, categories, transactions } = effectiveData;
+  const { budget, categories, transactions, bills: monthBills } = effectiveData;
   const filteredTransactions = useMemo(
     () => (transactions || []).filter((t) => new Date(t.date).getFullYear() === Number(selectedYearValue)),
     [transactions, selectedYearValue]
   );
 
-  const categoryGroupIndex = useMemo(() => {
-    const map = {};
-    DASHBOARD_GROUPS.forEach((group) => {
-      (categories[group] || []).forEach((cat) => {
-        const key = normalizeCategoryKey(cat);
-        if (key && map[key] === undefined) map[key] = group;
-      });
-    });
-    return map;
-  }, [categories]);
+  const categoryGroupIndex = useMemo(
+    () => buildCategoryGroupIndex(categories),
+    [categories]
+  );
 
   const groupCategories = useMemo(() => {
     const map = {};
@@ -155,6 +125,25 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     });
     return map;
   }, [categories]);
+
+  const monthOverview = useMemo(
+    () => computeMonthOverview({
+      categories,
+      budget,
+      transactions,
+      bills: monthBills,
+      year: selectedYearValue,
+      monthIndex: selectedMonth,
+    }),
+    [categories, budget, transactions, monthBills, selectedYearValue, selectedMonth]
+  );
+
+  const nextActions = useMemo(() => suggestNextActions(monthOverview), [monthOverview]);
+
+  const goToNextAction = (target) => {
+    if (target === 'monthly' && setInitialMonth) setInitialMonth(selectedMonth);
+    if (setPage) setPage(target);
+  };
 
   // Annual budget per group+cat
   const annualBudgetByCat = useMemo(() => {
@@ -174,9 +163,9 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     DASHBOARD_GROUPS.forEach(g => {
       result[g] = {};
       (groupCategories[g] || []).forEach(cat => {
-        const catKey = normalizeCategoryKey(cat);
+        const catKey = cat.toLowerCase();
         result[g][cat] = filteredTransactions
-          .filter((t) => resolveCategoryGroup(t, categoryGroupIndex) === g && normalizeCategoryKey(t.category) === catKey)
+          .filter((t) => resolveCategoryGroup(t, categoryGroupIndex) === g && String(t.category || '').trim().toLowerCase() === catKey)
           .reduce((s, t) => s + normalizeAmount(t.amount), 0);
       });
     });
@@ -189,14 +178,14 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     DASHBOARD_GROUPS.forEach(g => {
       result[g] = MONTHS.map((month, mIdx) => {
         const budgetTotal = (groupCategories[g] || []).reduce((s, cat) => s + (budget[g]?.[cat]?.[mIdx] || 0), 0);
-        const categoryKeys = new Set((groupCategories[g] || []).map((cat) => normalizeCategoryKey(cat)));
+        const categoryKeys = new Set((groupCategories[g] || []).map((cat) => String(cat || '').trim().toLowerCase()));
         const actualTotal = transactions
           .filter(t => {
             const d = new Date(t.date);
             return d.getMonth() === mIdx
               && d.getFullYear() === Number(selectedYearValue)
               && resolveCategoryGroup(t, categoryGroupIndex) === g
-              && categoryKeys.has(normalizeCategoryKey(t.category));
+              && categoryKeys.has(String(t.category || '').trim().toLowerCase());
           })
           .reduce((s, t) => s + normalizeAmount(t.amount), 0);
         return { month, budget: budgetTotal, actual: actualTotal };
@@ -270,6 +259,8 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
     return result;
   }, [groupCategories, catActuals]);
 
+  const [annualOpen, setAnnualOpen] = useState(false);
+
   const renderSection = (sec, idx) => {
     const { group, cssClass, label, accent } = sec;
     const cats = groupCategories[group] || [];
@@ -279,7 +270,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
 
     return (
       <div key={group} className="section-block">
-        <div className={`section-header ${cssClass}`}>{label}</div>
+        <h3 className={`section-header ${cssClass}`}>{label}</h3>
         <div className="section-body">
 
           {/* Left: category table */}
@@ -325,12 +316,12 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
           </div>
 
           {/* Right: panels */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div className="section-panels-stack">
 
             {/* Row 1: Overview + Split stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, borderBottom: '1px solid var(--border)' }}>
+            <div className="section-split-grid">
               {/* Overview */}
-              <div className="overview-panel" style={{ borderRight: '1px solid var(--border)' }}>
+              <div className="overview-panel">
                 <div className="section-panel-title">
                   {group === 'Income' ? 'Annual Income Overview' : group === 'Expenses' ? 'Annual Expenses Overview' : group === 'Debt' ? 'Annual Debt Payoff Overview' : 'Annual Savings Overview'}
                 </div>
@@ -345,7 +336,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
                 <div className="progress-bar" style={{ margin: '8px 0' }}>
                   <div className="progress-bar-fill" style={{ width: `${Math.min(statRow.pct, 100)}%`, background: accent }} />
                 </div>
-                <div style={{ color: accent, fontSize: '0.9rem', fontWeight: 600 }}>{statRow.pct}%</div>
+                <div style={{ color: accent, fontSize: '0.9rem', fontWeight: 600 }}>{statRow.goal > 0 ? `${statRow.pct}%` : '—'}</div>
                 <div className="overview-big" style={{ color: accent }}>{fmt(Math.abs(statRow.under))}</div>
                 <div className="overview-sub">{statRow.under >= 0 ? 'under' : 'over'} {sec.overLabel} this year</div>
               </div>
@@ -454,22 +445,26 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
             </div>
 
             {/* Row 2: Bar chart + Donut */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+            <div className="section-chart-grid">
               {/* Bar chart: by month */}
-              <div className="section-panel" style={{ borderRight: '1px solid var(--border)' }}>
+              <div className="section-panel section-chart-first">
                 <div className="section-panel-title">{group} by Month</div>
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart data={monthlyData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                    <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                    <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={fmtShort} width={45} />
-                    <Tooltip
-                      contentStyle={{ background: '#1a1f2e', border: '1px solid #2d3348', borderRadius: 6 }}
-                      formatter={(v) => [fmt(v)]}
-                    />
-                    <Bar dataKey="budget" fill="#2d3348" name="Budget" radius={[2,2,0,0]} />
-                    <Bar dataKey="actual" fill={accent} name="Actual" radius={[2,2,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {monthlyData.some((d) => d.budget > 0 || d.actual > 0) ? (
+                  <ResponsiveContainer width="100%" height={160}>
+                    <BarChart data={monthlyData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                      <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                      <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={fmtShort} width={45} />
+                      <Tooltip
+                        contentStyle={{ background: '#1a1f2e', border: '1px solid #2d3348', borderRadius: 6 }}
+                        formatter={(v) => [fmt(v)]}
+                      />
+                      <Bar dataKey="budget" fill="#2d3348" name="Budget" radius={[2,2,0,0]} />
+                      <Bar dataKey="actual" fill={accent} name="Actual" radius={[2,2,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="chart-empty">No data yet</div>
+                )}
               </div>
 
               {/* Donut: breakdown by category */}
@@ -498,7 +493,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div style={{ color: 'var(--muted)', fontSize: '0.82rem', padding: '20px 0' }}>No data yet</div>
+                  <div className="chart-empty">No data yet</div>
                 )}
               </div>
             </div>
@@ -514,36 +509,152 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
       {/* Page heading */}
       <div className="page-heading">
         <div className="page-heading-left">
-          <h1>Annual Dashboard</h1>
-          <span className="page-heading-sub">{selectedYearValue} Budget Overview</span>
+          <h1>Dashboard</h1>
+          <span className="page-heading-sub">
+            {MONTHS[selectedMonth]} {selectedYearValue}
+            {activeBudgetMeta && activeBudgetMeta.id !== currentId ? ` · ${activeBudgetMeta.name}` : ''}
+          </span>
         </div>
-        <div className="month-selector">
-          <select value={selectedYearValue} onChange={(e) => handleYearChange(e.target.value)}>
+        <div className="month-selector dashboard-month-selector">
+          <label className="visually-hidden" htmlFor="dashboard-month-select">Month</label>
+          <select
+            id="dashboard-month-select"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+          >
+            {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+          </select>
+          <label className="visually-hidden" htmlFor="dashboard-year-select">Year</label>
+          <select
+            id="dashboard-year-select"
+            value={selectedYearValue}
+            onChange={(e) => handleYearChange(e.target.value)}
+          >
             {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
       </div>
 
-      {/* Stat tiles */}
-      <div className="stat-tiles">
-        {topStats.map(s => (
-          <div key={s.group} className="stat-tile">
-            <div className={`stat-tile-header section-header ${s.cssClass}`}>{s.label}</div>
-            <div className="stat-tile-body">
-              <div className="stat-tile-amount" style={{ color: s.accent }}>{fmt(s.actual)}</div>
-              <div className="stat-tile-label">{s.displayLabel}</div>
-              <div className="progress-bar">
-                <div className="progress-bar-fill" style={{ width: `${Math.min(s.pct, 100)}%`, background: s.accent }} />
-              </div>
-              <div className="stat-tile-pct" style={{ color: s.accent }}>{s.pct}%</div>
-              <div className="stat-tile-under">{fmt(Math.abs(s.under))} {s.under >= 0 ? 'under' : 'over'} goal</div>
+      {/* Current-month overview */}
+      <div className="stat-tiles dashboard-month-tiles">
+        <div className="stat-tile">
+          <h3 className="stat-tile-header section-header income">INCOME</h3>
+          <div className="stat-tile-body">
+            <div className="stat-tile-amount" style={{ color: 'var(--income-accent)' }}>{fmt(monthOverview.incomeActual)}</div>
+            <div className="stat-tile-label">Income in {MONTHS[selectedMonth]}</div>
+            <div className="progress-bar">
+              <div className="progress-bar-fill" style={{ width: `${Math.min(monthOverview.incomePct ?? 0, 100)}%`, background: 'var(--income-accent)' }} />
+            </div>
+            <div className="stat-tile-pct" style={{ color: 'var(--income-accent)' }}>
+              {monthOverview.incomePct == null ? '—' : `${monthOverview.incomePct}% of ${fmt(monthOverview.incomePlan)} planned`}
             </div>
           </div>
-        ))}
+        </div>
+
+        <div className="stat-tile">
+          <h3 className="stat-tile-header section-header expenses">SPENDING</h3>
+          <div className="stat-tile-body">
+            <div className="stat-tile-amount" style={{ color: 'var(--expense-accent)' }}>{fmt(monthOverview.expenseActual)}</div>
+            <div className="stat-tile-label">Spending in {MONTHS[selectedMonth]}</div>
+            <div className="progress-bar">
+              <div className="progress-bar-fill" style={{ width: `${Math.min(monthOverview.expensePct ?? 0, 100)}%`, background: 'var(--expense-accent)' }} />
+            </div>
+            <div className="stat-tile-pct" style={{ color: 'var(--expense-accent)' }}>
+              {monthOverview.expensePct == null
+                ? '—'
+                : `${monthOverview.expensePct}% of ${fmt(monthOverview.expensePlan)} planned`}
+            </div>
+            <div className="stat-tile-under">
+              {monthOverview.expenseRemaining >= 0
+                ? `${fmt(monthOverview.expenseRemaining)} left in plan`
+                : `${fmt(-monthOverview.expenseRemaining)} over plan`}
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-tile">
+          <h3 className="stat-tile-header section-header savings">PLAN BALANCE</h3>
+          <div className="stat-tile-body">
+            <div className="stat-tile-amount" style={{ color: monthOverview.leftToAllocate >= 0 ? 'var(--savings-accent)' : 'var(--danger)' }}>
+              {fmt(monthOverview.leftToAllocate)}
+            </div>
+            <div className="stat-tile-label">Left to allocate in {MONTHS[selectedMonth]}</div>
+            <div className="stat-tile-under">
+              {fmt(monthOverview.incomePlan)} income − {fmt(monthOverview.plannedOutflows)} planned outflows
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-tile">
+          <h3 className="stat-tile-header section-header debt">UPCOMING BILLS</h3>
+          <div className="stat-tile-body">
+            <div className="stat-tile-amount">{monthOverview.upcomingCount}</div>
+            <div className="stat-tile-label">
+              {monthOverview.upcomingCount === 0
+                ? 'No bills due in this month'
+                : `${fmt(monthOverview.upcomingTotal)} due in ${MONTHS[selectedMonth]}`}
+            </div>
+            {monthOverview.nearestBill && (
+              <div className="stat-tile-under">
+                {monthOverview.nearestBill.name} due {monthOverview.nearestBill.dueDate}
+                {monthOverview.nearestBill.daysUntil === 0 ? ' (today)' : ` (in ${monthOverview.nearestBill.daysUntil} day${monthOverview.nearestBill.daysUntil !== 1 ? 's' : ''})`}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Section blocks */}
-      {SECTIONS.map((sec, i) => renderSection(sec, i))}
+      {/* Suggested next actions */}
+      {nextActions.length > 0 && (
+        <div className="card next-actions-card">
+          <div className="next-actions-title">Suggested next steps</div>
+          <div className="next-actions-list">
+            {nextActions.map((action) => (
+              <button key={action.id} type="button" className="next-action-btn" onClick={() => goToNextAction(action.target)}>
+                <span className="next-action-copy">
+                  <span className="next-action-label">{action.label}</span>
+                  {action.hint && <span className="next-action-hint">{action.hint}</span>}
+                </span>
+                <UiShellIcon name="FiChevronRight" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Annual details (progressive disclosure) */}
+      <div className="annual-disclosure">
+        <button
+          type="button"
+          className="annual-disclosure-btn"
+          aria-expanded={annualOpen}
+          aria-controls="dashboard-annual-details"
+          onClick={() => setAnnualOpen(v => !v)}
+        >
+          <span className="annual-disclosure-label">Annual budget details for {selectedYearValue}</span>
+          <UiShellIcon name="FiChevronDown" className={`annual-disclosure-chevron${annualOpen ? ' is-open' : ''}`} />
+        </button>
+        <div id="dashboard-annual-details" className="annual-details" hidden={!annualOpen}>
+          <div className="stat-tiles">
+            {topStats.map(s => (
+              <div key={s.group} className="stat-tile">
+                <h3 className={`stat-tile-header section-header ${s.cssClass}`}>{s.label}</h3>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-amount" style={{ color: s.accent }}>{fmt(s.actual)}</div>
+                  <div className="stat-tile-label">{s.displayLabel}</div>
+                  <div className="progress-bar">
+                    <div className="progress-bar-fill" style={{ width: `${Math.min(s.pct, 100)}%`, background: s.accent }} />
+                  </div>
+                  <div className="stat-tile-pct" style={{ color: s.accent }}>{s.goal > 0 ? `${s.pct}%` : '—'}</div>
+                  <div className="stat-tile-under">{fmt(Math.abs(s.under))} {s.under >= 0 ? 'under' : 'over'} goal</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {SECTIONS.map((sec, i) => renderSection(sec, i))}
+        </div>
+      </div>
     </div>
   );
 }

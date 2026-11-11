@@ -4,6 +4,8 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { MONTHS, CATEGORY_META } from '../data/defaults.js';
+import { budgetType, budgetYear, getBudgetYears, selectBudgetForPeriod } from '../utils/budgetSelection.js';
+import { sumTransactionAmounts, transactionMatchesPeriod } from '../utils/transactions.js';
 
 const GROUPS = ['Income', 'Savings', 'Investments', 'Expenses', 'Debt'];
 const SECTION_META = {
@@ -29,45 +31,28 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
   const currentMonth = new Date().getMonth();
   const currentYear  = new Date().getFullYear();
   const currentBudget = useMemo(() => budgetList.find((b) => b.id === currentId), [budgetList, currentId]);
-  const currentType = currentBudget?.type || 'personal';
-  const sameTypeBudgets = useMemo(
-    () => Object.entries(allBudgets || {}).filter(([, budgetData]) => (budgetData?.type || 'personal') === currentType),
-    [allBudgets, currentType]
-  );
+  const currentType = budgetType(currentBudget);
   const [monthIdx, setMonthIdx] = useState(initialMonth ?? currentMonth);
-  const yearsWithData = useMemo(() => {
-    const years = sameTypeBudgets.flatMap(([, budgetData]) =>
-      (budgetData?.transactions || [])
-        .map((t) => new Date(t.date).getFullYear())
-        .filter(Number.isFinite)
-    );
-    return Array.from(new Set(years)).sort((a, b) => b - a);
-  }, [sameTypeBudgets]);
-  const defaultYear = yearsWithData[0] || currentYear;
+  const years = useMemo(
+    () => getBudgetYears({ budgets: allBudgets, currentId, type: currentType, now: new Date() }),
+    [allBudgets, currentId, currentType]
+  );
+  const defaultYear = budgetYear(currentBudget) ?? years[0] ?? currentYear;
   const [year, setYear]         = useState(defaultYear);
-
-  const years = useMemo(() => {
-    const set = new Set([currentYear, ...yearsWithData]);
-    return Array.from(set).sort((a, b) => b - a);
-  }, [yearsWithData, currentYear]);
   const yearValue = years.includes(year) ? year : defaultYear;
   const monthName = MONTHS[monthIdx];
 
   const handleYearChange = (nextYear) => {
     const y = Number(nextYear);
     setYear(y);
-    const target = sameTypeBudgets
-      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === y))?.[0];
-    if (target && target !== currentId) onSwitchBudget(target);
+    const target = selectBudgetForPeriod({ budgets: allBudgets, currentId, year: y, type: currentType });
+    if (target && target.id !== currentId) onSwitchBudget(target.id);
   };
 
-  const activeBudgetMeta = useMemo(() => {
-    if ((data.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(yearValue))) return currentBudget;
-    const match = sameTypeBudgets
-      .find(([, budgetData]) => (budgetData?.transactions || []).some((t) => new Date(t.date).getFullYear() === Number(yearValue)));
-    if (!match) return null;
-    return budgetList.find((b) => b.id === match[0]) || null;
-  }, [data.transactions, currentBudget, sameTypeBudgets, yearValue, budgetList]);
+  const activeBudgetMeta = useMemo(
+    () => selectBudgetForPeriod({ budgets: allBudgets, currentId, year: yearValue, type: currentType }),
+    [allBudgets, currentId, yearValue, currentType]
+  );
 
   const emptyData = useMemo(() => {
     const sourceCategories = data.categories || {};
@@ -99,12 +84,9 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
     GROUPS.forEach(g => {
       result[g] = {};
       (categories[g] || []).forEach(cat => {
-        result[g][cat] = transactions
-          .filter(t => {
-            const d = new Date(t.date);
-            return d.getMonth() === monthIdx && d.getFullYear() === yearValue && t.category === cat;
-          })
-          .reduce((s, t) => s + Number(t.amount), 0);
+        result[g][cat] = sumTransactionAmounts(transactions.filter(
+          (t) => transactionMatchesPeriod(t, { year: yearValue, month: monthIdx }) && t.category === cat
+        ));
       });
     });
     return result;
@@ -130,10 +112,9 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
       incomePassive: sum('Income',   c => !CATEGORY_META.Income?.[c]?.active),
       expNeed:       sum('Expenses', c => CATEGORY_META.Expenses?.[c]?.need),
       expWant:       sum('Expenses', c => !CATEGORY_META.Expenses?.[c]?.need),
-      subscriptions: transactions.filter(t => {
-        const d = new Date(t.date);
-        return d.getMonth() === monthIdx && d.getFullYear() === yearValue && t.subscription;
-      }).reduce((s, t) => s + Number(t.amount), 0),
+      subscriptions: sumTransactionAmounts(transactions.filter(
+        (t) => transactionMatchesPeriod(t, { year: yearValue, month: monthIdx }) && t.subscription
+      )),
       debtHigh: sum('Debt',    c => CATEGORY_META.Debt?.[c]?.highPriority),
       debtLow:  sum('Debt',    c => !CATEGORY_META.Debt?.[c]?.highPriority),
       savLong:  sum('Savings', c => CATEGORY_META.Savings?.[c]?.longTerm),
@@ -398,7 +379,7 @@ export default function MonthlyView({ data, allBudgets = {}, initialMonth, budge
                       <ResponsiveContainer width="100%" height={150}>
                         <PieChart>
                           <Pie data={pie} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value">
-                            {pie.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                            {pie.map((entry, i) => <Cell key={entry.name} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                           </Pie>
                           <Tooltip
                             contentStyle={{ background: '#1a1f2e', border: '1px solid #2d3348', borderRadius: 6 }}

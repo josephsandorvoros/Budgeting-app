@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEFAULT_DATA, DEFAULT_ACCOUNTS, DEFAULT_BILLS } from '../data/defaults.js';
+import { createDemoImportState, exportDemoState, loadDemoState, resetDemoState, resolveDemoMode, saveDemoState } from '../data/demo.js';
 
 const STORAGE_KEY = 'budget_app_v6';
 const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI;
@@ -7,11 +8,17 @@ const IS_PACKAGED_ELECTRON = IS_ELECTRON && typeof window !== 'undefined' && win
 const API_BASE = IS_ELECTRON
   ? (IS_PACKAGED_ELECTRON ? 'http://127.0.0.1:18765/api' : 'http://127.0.0.1:8765/api')
   : '/api';
+const DEMO_MODE = resolveDemoMode({
+  viteDemoMode: typeof import.meta !== 'undefined' ? import.meta.env?.VITE_DEMO_MODE : undefined,
+  hasElectronAPI: IS_ELECTRON,
+  protocol: typeof window !== 'undefined' ? window.location?.protocol : '',
+});
 const DEFAULT_TEMPLATE_ID = 'tpl_builtin_comprehensive';
 const YP_TEMPLATE_ID = 'tpl_builtin_young_professional';
 const BIZ_TEMPLATE_ID = 'tpl_builtin_side_hustle';
 
 async function api(method, path, body) {
+  if (DEMO_MODE) return null;
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
@@ -278,10 +285,15 @@ function clearLegacyBudgetCache() {
 }
 
 export function useAppData() {
-  const [state, setState] = useState(() => ({ currentId: null, budgets: {}, templates: [], loading: true }));
+  const [state, setState] = useState(() => (
+    DEMO_MODE
+      ? { ...loadDemoState(), loading: false }
+      : { currentId: null, budgets: {}, templates: [], loading: true }
+  ));
 
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
+    if (DEMO_MODE) return;
     const hasDataTimeout = IS_ELECTRON ? 10000 : 3000;
     const loadAllTimeout = IS_ELECTRON ? 20000 : 6000;
     const templatesTimeout = IS_ELECTRON ? 10000 : 3000;
@@ -329,6 +341,10 @@ export function useAppData() {
   // ── Persist to localStorage as offline cache ──────────────────────────────
   useEffect(() => {
     if (state.loading) return;
+    if (DEMO_MODE) {
+      saveDemoState(state);
+      return;
+    }
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch (e) { console.error('Failed to save', e); }
   }, [state]);
@@ -713,6 +729,7 @@ export function useAppData() {
 
   // ── Backup / restore ─────────────────────────────────────────────────────
   const exportAllData = useCallback(() => {
+    if (DEMO_MODE) return exportDemoState(state);
     const { loading: _loading, ...snapshot } = state;
     return JSON.parse(JSON.stringify(snapshot));
   }, [state]);
@@ -730,11 +747,23 @@ export function useAppData() {
       budgets: nextState.budgets,
     };
 
+    if (DEMO_MODE) {
+      const demoImport = createDemoImportState(sanitized, { templates });
+      setState({ ...demoImport, loading: false });
+      saveDemoState(demoImport);
+      return;
+    }
+
     setState({ ...sanitized, loading: false });
     await api('POST', '/import-all', sanitized);
-  }, []);
+  }, [templates]);
 
   const resetAllData = useCallback(async ({ keepTemplates = true } = {}) => {
+    if (DEMO_MODE) {
+      const next = resetDemoState();
+      setState({ ...next, loading: false });
+      return;
+    }
     const statePayload = {
       currentId: null,
       budgets: {},

@@ -1,31 +1,20 @@
 import { useState, useMemo, useRef } from 'react';
+import {
+  GROUPS,
+  TRANSACTION_TYPES as TYPES,
+  OUTFLOW_TYPES,
+  applyPeriod,
+  applyTransactionCategory,
+  applyTransactionType,
+  categoriesForType,
+  categoryOptionsForTransaction,
+  getTransactionsEmptyState,
+  sortAlpha,
+} from '../utils/transactions.js';
 
-const GROUPS = ['Income', 'Expenses', 'Savings', 'Debt'];
-const TYPES  = ['income', 'expense', 'savings', 'debt', 'transfer'];
-const GROUP_BY_TYPE = {
-  income: 'Income',
-  expense: 'Expenses',
-  savings: 'Savings',
-  debt: 'Debt',
-};
-const OUTFLOW_TYPES = new Set(['expense', 'savings', 'debt']);
 const fmtAbs = (n) => `$${Math.abs(Number(n)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const normalizeAmount = (v) => Math.abs(Number(v) || 0);
 const normalizeCategoryKey = (v) => String(v || '').trim().toLowerCase();
-
-function sortAlpha(values = []) {
-  return [...values].sort((a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' }));
-}
-
-function categoriesForType(type, categories) {
-  if (type === 'transfer') return [];
-  const group = GROUP_BY_TYPE[type] || 'Expenses';
-  return sortAlpha(categories[group] || []);
-}
-
-function groupedCategoryOptions(categories) {
-  return GROUPS.map((group) => ({ group, items: sortAlpha(categories[group] || []) })).filter((entry) => entry.items.length > 0);
-}
 
 // ── Time period helpers ────────────────────────────────────────────────────
 const TIME_PERIODS = [
@@ -36,24 +25,6 @@ const TIME_PERIODS = [
   { label: 'Last 3 Months', value: 'last-3m' },
   { label: 'Last 6 Months', value: 'last-6m' },
 ];
-
-function applyPeriod(txs, period) {
-  const now = new Date();
-  const yr = now.getFullYear();
-  const mo = now.getMonth();
-  switch (period) {
-    case 'this-year':  return txs.filter(t => new Date(t.date).getFullYear() === yr);
-    case 'this-month': return txs.filter(t => { const d = new Date(t.date); return d.getFullYear() === yr && d.getMonth() === mo; });
-    case 'last-month': {
-      const lm = mo === 0 ? 11 : mo - 1;
-      const ly = mo === 0 ? yr - 1 : yr;
-      return txs.filter(t => { const d = new Date(t.date); return d.getFullYear() === ly && d.getMonth() === lm; });
-    }
-    case 'last-3m': { const c = new Date(now); c.setMonth(c.getMonth() - 3); return txs.filter(t => new Date(t.date) >= c); }
-    case 'last-6m': { const c = new Date(now); c.setMonth(c.getMonth() - 6); return txs.filter(t => new Date(t.date) >= c); }
-    default: return txs;
-  }
-}
 
 // ── CSV helpers ────────────────────────────────────────────────────────────
 function parseCSV(text) {
@@ -121,12 +92,12 @@ function rowToTransaction(row, categories) {
 }
 
 function emptyForm(categories) {
-  const allCats = GROUPS.flatMap(g => categories[g] || []);
+  const expenseCategories = categoriesForType('expense', categories);
   return {
     date: new Date().toISOString().slice(0, 10),
     description: '',
-    category: allCats[0] || '',
-    group: GROUPS[0],
+    category: expenseCategories[0] || '',
+    group: 'Expenses',
     amount: '',
     type: 'expense',
     is_subscription: false,
@@ -178,7 +149,6 @@ function SortTh({ col, sortCol, sortDir, onSort, children, style }) {
 export default function Expenses({ data, addTransaction, deleteTransaction, updateTransaction, importTransactions }) {
   const { transactions, categories, accounts = [] } = data;
   const allCategories = useMemo(() => sortAlpha(GROUPS.flatMap(g => categories[g] || [])), [categories]);
-  const groupedOptions = useMemo(() => groupedCategoryOptions(categories), [categories]);
   const accountOptions = useMemo(
     () => [...(accounts || [])].sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), undefined, { sensitivity: 'base' })),
     [accounts]
@@ -278,32 +248,12 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
   const totalNet = totalIn - totalOut;
 
   // Form handlers
-  const handleGroupChange = (e) => {
-    const grp = e.target.value;
-    setForm(f => ({ ...f, group: grp, category: sortAlpha(categories[grp] || [])[0] || '' }));
+  const handleTypeChange = (nextType) => {
+    setForm((current) => applyTransactionType(current, nextType, categories));
   };
 
-  const handleTypeChange = (nextType) => {
-    const nextCats = categoriesForType(nextType, categories);
-    setForm((f) => {
-      if (nextType === 'transfer') {
-        return {
-          ...f,
-          type: nextType,
-          group: '',
-          category: 'Transfer',
-          is_subscription: false,
-        };
-      }
-
-      const nextGroup = GROUP_BY_TYPE[nextType] || f.group;
-      return {
-        ...f,
-        type: nextType,
-        group: nextGroup,
-        category: nextCats.includes(f.category) ? f.category : (nextCats[0] || ''),
-      };
-    });
+  const handleCategoryChange = (nextCategory) => {
+    setForm((current) => applyTransactionCategory(current, nextCategory, categories));
   };
 
   const handleSubmit = (e) => {
@@ -314,7 +264,8 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
       if (!form.fromAccountId || !form.toAccountId || form.fromAccountId === form.toAccountId) return;
     }
 
-    addTransaction({ ...form, amount: normalizeAmount(form.amount) });
+    const classified = applyTransactionType(form, form.type, categories);
+    addTransaction({ ...classified, amount: normalizeAmount(classified.amount) });
     setForm(emptyForm(categories));
     setShowForm(false);
   };
@@ -328,7 +279,10 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
       if (!editForm.fromAccountId || !editForm.toAccountId || editForm.fromAccountId === editForm.toAccountId) return;
     }
 
-    updateTransaction(editingId, { ...editForm, amount: normalizeAmount(editForm.amount) });
+    const original = (transactions || []).find((t) => t.id === editingId);
+    const typeChanged = original && String(original.type || '').toLowerCase() !== String(editForm.type || '').toLowerCase();
+    const classified = typeChanged ? applyTransactionType(editForm, editForm.type, categories) : editForm;
+    updateTransaction(editingId, { ...classified, amount: normalizeAmount(classified.amount) });
     setEditingId(null); setEditForm(null);
   };
 
@@ -343,7 +297,11 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
       try {
         const rows = parseCSV(ev.target.result);
         if (!rows.length) { setCsvError('No data rows found in CSV.'); return; }
-        setCsvPreview(rows.map(r => rowToTransaction(r, categories)));
+        const stamp = Date.now();
+        setCsvPreview(rows.map((row, index) => {
+          const tx = rowToTransaction(row, categories);
+          return { ...tx, id: tx.id || `preview_${stamp}_${index}` };
+        }));
       } catch (err) { setCsvError('Failed to parse CSV: ' + err.message); }
     };
     reader.readAsText(file);
@@ -361,6 +319,18 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
     setCsvPreview(prev => { const n = prev.filter((_, idx) => idx !== i); return n.length ? n : null; });
 
   const hasActiveFilters = period !== 'all' || filterCat || typeFilter !== 'all' || reviewed !== 'all' || search;
+  const clearFilters = () => {
+    setPeriod('all');
+    setFilterCat('');
+    setTypeFilter('all');
+    setReviewed('all');
+    setSearch('');
+  };
+  const emptyState = getTransactionsEmptyState({
+    totalCount: transactions.length,
+    filteredCount: filtered.length,
+    hasActiveFilters: Boolean(hasActiveFilters),
+  });
   const colCount = visibleCols.size + 1; // +1 for actions column
 
   return (
@@ -446,7 +416,7 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
 
           {hasActiveFilters && (
             <button className="btn-ghost" style={{ fontSize: '0.78rem', padding: '5px 10px' }}
-              onClick={() => { setPeriod('all'); setFilterCat(''); setTypeFilter('all'); setReviewed('all'); setSearch(''); }}>
+              onClick={clearFilters}>
               Clear filters
             </button>
           )}
@@ -461,15 +431,8 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
             <label>Date<input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required /></label>
             <label>Payee / Description<input type="text" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Grocery run" required /></label>
             {form.type !== 'transfer' && (
-              <label>Group
-                <select value={form.group} onChange={handleGroupChange}>
-                  {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </label>
-            )}
-            {form.type !== 'transfer' && (
               <label>Category
-                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                <select value={form.category} onChange={e => handleCategoryChange(e.target.value)}>
                   {categoriesForType(form.type, categories).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </label>
@@ -544,7 +507,7 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
               </thead>
               <tbody>
                 {csvPreview.map((row, i) => (
-                  <tr key={i}>
+                  <tr key={row.id || i}>
                     <td><input type="date" value={row.date} onChange={e => updatePreviewRow(i,'date',e.target.value)} className="tx-inline-input" style={{ width: 130 }} /></td>
                     <td><input type="text"  value={row.description} onChange={e => updatePreviewRow(i,'description',e.target.value)} className="tx-inline-input" style={{ minWidth: 140 }} /></td>
                     <td>
@@ -591,7 +554,24 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={colCount} className="tx-empty-row">No transactions match your filters.</td></tr>
+              <tr>
+                <td colSpan={colCount} className="tx-empty-row">
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                    <span>{emptyState.message}</span>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {emptyState.kind === 'no-transactions' && (
+                        <>
+                          <button className="btn-primary" onClick={() => setShowForm(true)}>+ Add your first transaction</button>
+                          <button className="btn-ghost" onClick={() => csvInputRef.current?.click()}>Import CSV</button>
+                        </>
+                      )}
+                      {emptyState.action === 'clear-filters' && (
+                        <button className="btn-ghost" onClick={clearFilters}>Clear filters</button>
+                      )}
+                    </div>
+                  </div>
+                </td>
+              </tr>
             )}
             {byMonth.map(([monthKey, txs]) => {
               const [yr, mo] = monthKey.split('-');
@@ -624,12 +604,13 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
                           {editForm.type === 'transfer' ? (
                             <span className="tx-cat-badge">Transfer</span>
                           ) : (
-                            <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} className="tx-inline-select">
-                              {groupedOptions.map(({ group, items }) => (
-                                <optgroup key={group} label={group}>
-                                  {items.map(c => <option key={`${group}-${c}`} value={c}>{c}</option>)}
-                                </optgroup>
-                              ))}
+                            <select value={editForm.category} onChange={e => setEditForm(f => applyTransactionCategory(f, e.target.value, categories))} className="tx-inline-select">
+                              {categoryOptionsForTransaction({
+                                type: editForm.type,
+                                group: editForm.group,
+                                category: editForm.category,
+                                categories,
+                              }).map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                           )}
                         </td>}
@@ -639,30 +620,10 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
                         {visibleCols.has('type') && <td>
                           <select
                             value={editForm.type}
-                            onChange={e => {
-                              const nextType = e.target.value;
-                              const nextCats = categoriesForType(nextType, categories);
-                              setEditForm(f => {
-                                if (nextType === 'transfer') {
-                                  return {
-                                    ...f,
-                                    type: nextType,
-                                    group: '',
-                                    category: 'Transfer',
-                                    is_subscription: false,
-                                  };
-                                }
-                                return {
-                                  ...f,
-                                  type: nextType,
-                                  group: GROUP_BY_TYPE[nextType] || f.group,
-                                  category: nextCats.includes(f.category) ? f.category : (nextCats[0] || ''),
-                                };
-                              });
-                            }}
+                            onChange={e => setEditForm(f => applyTransactionType(f, e.target.value, categories))}
                             className="tx-inline-select"
                           >
-                            {TYPES.map(tp => <option key={tp} value={tp}>{tp}</option>)}
+                            {Array.from(new Set([...TYPES, editForm.type].filter(Boolean))).map(tp => <option key={tp} value={tp}>{tp}</option>)}
                           </select>
                         </td>}
                         {visibleCols.has('notes')  && <td>

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { MONTHS, ACCOUNT_HIERARCHY } from '../data/defaults.js';
 import AppIcon from '../components/AppIcon.jsx';
+import UiShellIcon from '../components/UiShellIcon.jsx';
 
 const fmt = (v) =>
   v == null ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(v);
@@ -25,13 +26,14 @@ function EditableCell({ value, onSave }) {
     );
   }
   return (
-    <span
-      className={`bs-cell-val${value == null ? ' bs-cell-dash' : value < 0 ? ' bs-cell-neg' : ''}`}
+    <button
+      type="button"
+      className={`bs-cell-btn${value == null ? ' bs-cell-dash' : value < 0 ? ' bs-cell-neg' : ''}`}
       onClick={() => { setDraft(value == null ? '' : String(value)); setEditing(true); }}
       title="Click to edit"
     >
       {value == null ? '—' : fmt(value)}
-    </span>
+    </button>
   );
 }
 
@@ -75,11 +77,18 @@ export default function BalanceSheet({ data, updateAccountBalance, updateAccount
           <div className="subtitle">{accounts.length} Accounts</div>
         </div>
         <div className="bs-header-actions">
-          <button className="btn-outline" onClick={() => setShowAddModal(true)}>＋ Add Account</button>
+          <button className="btn-outline" onClick={() => setShowAddModal(true)}>
+            <UiShellIcon name="FiPlus" /> Add Account
+          </button>
         </div>
       </div>
 
-      <div className="bs-table-wrap">
+      <div
+        className="bs-table-wrap table-scroll-region"
+        role="region"
+        aria-label="Balance sheet accounts by month"
+        tabIndex={0}
+      >
         <table className="bs-table">
           <thead>
             <tr>
@@ -90,12 +99,24 @@ export default function BalanceSheet({ data, updateAccountBalance, updateAccount
           </thead>
           <tbody>
             {Object.entries(ACCOUNT_HIERARCHY).map(([cls, subtypes]) => (
-              <>
+              <Fragment key={cls}>
                 {/* Asset/Liability class header */}
-                <tr key={cls} className="bs-row-class" onClick={() => toggle(cls)}>
+                <tr className="bs-row-class" onClick={() => toggle(cls)}>
                   <td className="bs-td-class">
-                    <span className="bs-toggle">{collapsed[cls] ? '▶' : '▼'}</span>
-                    <span>{cls === 'ASSETS' ? '↗ ASSETS' : '↘ LIABILITIES'}</span>
+                    <button
+                      type="button"
+                      className="bs-row-toggle-btn"
+                      onClick={(e) => { e.stopPropagation(); toggle(cls); }}
+                      aria-expanded={!collapsed[cls]}
+                    >
+                      <span className="bs-toggle" aria-hidden="true">
+                        {collapsed[cls] ? <UiShellIcon name="FiChevronRight" /> : <UiShellIcon name="FiChevronDown" />}
+                      </span>
+                      <span className="bs-class-icon" aria-hidden="true">
+                        {cls === 'ASSETS' ? <UiShellIcon name="FiTrendingUp" /> : <UiShellIcon name="FiTrendingDown" />}
+                      </span>
+                      <span>{cls === 'ASSETS' ? 'ASSETS' : 'LIABILITIES'}</span>
+                    </button>
                   </td>
                   <td className={`bs-td-total${cls === 'LIABILITIES' ? ' bs-neg' : ''}`}>
                     {fmt(classTotal(cls, -1))}
@@ -114,12 +135,21 @@ export default function BalanceSheet({ data, updateAccountBalance, updateAccount
                 {!collapsed[cls] && subtypes.map(st => {
                   const accs = grouped[cls][st];
                   return (
-                    <>
+                    <Fragment key={`${cls}-${st}`}>
                       {/* Subtype header */}
-                      <tr key={`${cls}-${st}`} className="bs-row-subtype" onClick={() => toggle(`${cls}-${st}`)}>
+                      <tr className="bs-row-subtype" onClick={() => toggle(`${cls}-${st}`)}>
                         <td className="bs-td-subtype">
-                          <span className="bs-toggle">{collapsed[`${cls}-${st}`] ? '▶' : '▼'}</span>
-                          <span>{st}</span>
+                          <button
+                            type="button"
+                            className="bs-row-toggle-btn"
+                            onClick={(e) => { e.stopPropagation(); toggle(`${cls}-${st}`); }}
+                            aria-expanded={!collapsed[`${cls}-${st}`]}
+                          >
+                            <span className="bs-toggle" aria-hidden="true">
+                              {collapsed[`${cls}-${st}`] ? <UiShellIcon name="FiChevronRight" /> : <UiShellIcon name="FiChevronDown" />}
+                            </span>
+                            <span>{st}</span>
+                          </button>
                         </td>
                         <td className={`bs-td-subtotal${cls === 'LIABILITIES' ? ' bs-neg' : ''}`}>
                           {fmt(subtypeTotal(cls, st, -1))}
@@ -158,10 +188,10 @@ export default function BalanceSheet({ data, updateAccountBalance, updateAccount
                           ))}
                         </tr>
                       ))}
-                    </>
+                    </Fragment>
                   );
                 })}
-              </>
+              </Fragment>
             ))}
 
             {/* NET WORTH row */}
@@ -183,6 +213,9 @@ export default function BalanceSheet({ data, updateAccountBalance, updateAccount
           </tbody>
         </table>
       </div>
+      <div className="table-scroll-hint" aria-hidden="true">
+        <UiShellIcon name="FiChevronRight" /> Scroll horizontally to see all months
+      </div>
 
       {/* Add Account Modal */}
       {showAddModal && (
@@ -190,7 +223,7 @@ export default function BalanceSheet({ data, updateAccountBalance, updateAccount
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Add Account</h2>
-              <button className="modal-close" onClick={() => setShowAddModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowAddModal(false)} aria-label="Close dialog"><UiShellIcon name="FiX" /></button>
             </div>
             <div className="modal-body">
               <div className="form-row">

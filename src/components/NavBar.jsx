@@ -1,21 +1,23 @@
 import { useState } from 'react';
+import AppIcon from './AppIcon.jsx';
+import UiShellIcon from './UiShellIcon.jsx';
 
 const BUDGET_SUB_PAGES = [
-  { id: 'dashboard',   label: 'Dashboard',        icon: '📊' },
-  { id: 'annual',      label: 'Annual Budget',     icon: '📅' },
-  { id: 'monthly',     label: 'Monthly View',      icon: '🗓️' },
-  { id: 'expenses',    label: 'Transactions',      icon: '💳' },
-  { id: 'balancesheet',label: 'Balance Sheet',     icon: '⚖️' },
-  { id: 'bills',       label: 'Bills & Recurring', icon: '🔄' },
+  { id: 'dashboard',    label: 'Dashboard',          icon: 'FiBarChart2' },
+  { id: 'annual',       label: 'Annual Budget',      icon: 'FiCalendar' },
+  { id: 'monthly',      label: 'Monthly View',      icon: 'FiGrid' },
+  { id: 'expenses',     label: 'Transactions',      icon: 'FiCreditCard' },
+  { id: 'balancesheet', label: 'Balance Sheet',     icon: 'FaBalanceScale' },
+  { id: 'bills',        label: 'Bills & Recurring', icon: 'FiRepeat' },
 ];
 
 const SETTINGS_ITEMS = [
-  { id: 'categories', label: 'Categories & Accounts', icon: '⚙️', activePages: ['categories', 'accounts'] },
-  { id: 'templates', label: 'Templates', icon: '🧩' },
-  { id: 'updates', label: 'Updates', icon: '⬆️' },
-  { id: 'data-management', label: 'Manage Data', icon: '🗄️' },
-  { id: 'whats-new', label: "What's New", icon: '🧭' },
-  { id: 'about', label: 'About', icon: 'ℹ️' },
+  { id: 'categories', label: 'Categories & Accounts', icon: 'FiSettings', activePages: ['categories', 'accounts'] },
+  { id: 'templates', label: 'Templates', icon: 'FiLayers' },
+  { id: 'updates', label: 'Updates', icon: 'FiArrowUp' },
+  { id: 'data-management', label: 'Manage Data', icon: 'FiDatabase' },
+  { id: 'whats-new', label: "What's New", icon: 'FiCompass' },
+  { id: 'about', label: 'About', icon: 'FiInfo' },
 ];
 
 const FEEDBACK_EMAIL = 'support.budgetledger.app@hybridcloudhq.com';
@@ -45,29 +47,60 @@ function BudgetGroup({ b, isActive, expanded, page, accentClass, icon, onToggle,
   return (
     <div className="sidebar-biz-group">
       <button
+        type="button"
         className={`sidebar-nav-item sidebar-biz-header${isActive ? ` active ${accentClass}` : ''}`}
         onClick={() => { onToggle(b.id); onSwitch(b.id); }}
         title={collapsed ? b.name : undefined}
+        aria-label={collapsed ? `Switch to ${b.name}` : undefined}
+        aria-expanded={!collapsed ? (expanded ? 'true' : 'false') : undefined}
       >
-        <span className="sidebar-nav-icon">{icon}</span>
+        <AppIcon value={icon} className="sidebar-nav-icon" label={`${b.name} budget icon`} />
         {!collapsed && <>
           <span className="sidebar-nav-label">{b.name}</span>
-          <span className="sidebar-biz-chevron">{expanded ? '▾' : '▸'}</span>
+          <span className="sidebar-biz-chevron" aria-hidden="true">
+            {expanded ? <UiShellIcon name="FiChevronDown" /> : <UiShellIcon name="FiChevronRight" />}
+          </span>
         </>}
       </button>
 
       {!collapsed && expanded && (
-        <div className="sidebar-biz-items">
-          {BUDGET_SUB_PAGES.map(item => (
-            <button
-              key={item.id}
-              className={`sidebar-nav-item sidebar-nav-sub${isActive && page === item.id ? ' active' : ''}`}
-              onClick={() => { onSwitch(b.id); setPage(item.id); }}
-            >
-              <span className="sidebar-nav-icon">{item.icon}</span>
-              <span className="sidebar-nav-label">{item.label}</span>
-            </button>
-          ))}
+        <div className="sidebar-biz-items" role="group" aria-label={`${b.name} destinations`}>
+          {BUDGET_SUB_PAGES.map(item => {
+            const active = isActive && page === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`sidebar-nav-item sidebar-nav-sub${active ? ' active' : ''}`}
+                onClick={() => { onSwitch(b.id); setPage(item.id); }}
+                aria-current={active ? 'page' : undefined}
+              >
+                <span className="sidebar-nav-icon" aria-hidden="true"><UiShellIcon name={item.icon} /></span>
+                <span className="sidebar-nav-label">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {collapsed && isActive && (
+        <div className="sidebar-collapsed-destinations" role="group" aria-label={`${b.name} destinations`}>
+          {BUDGET_SUB_PAGES.map(item => {
+            const active = page === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`sidebar-nav-item sidebar-nav-sub sidebar-nav-collapsed-sub${active ? ' active' : ''}`}
+                onClick={() => { onSwitch(b.id); setPage(item.id); }}
+                title={item.label}
+                aria-label={`${item.label} — ${b.name}`}
+                aria-current={active ? 'page' : undefined}
+              >
+                <span className="sidebar-nav-icon" aria-hidden="true"><UiShellIcon name={item.icon} /></span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -107,23 +140,26 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
     setExpandedBiz(prev => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`}>
+    <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`} aria-label="Primary navigation">
 
       {/* ── Brand header ── */}
       <div className="sidebar-header">
         {!collapsed && (
           <div className="sidebar-brand">
-            <div className="sidebar-logo">📒</div>
+            <div className="sidebar-logo" aria-hidden="true"><UiShellIcon name="FiBookOpen" /></div>
             <div className="sidebar-title">BUDGET LEDGER</div>
             <div className="sidebar-tagline">PLAN WITH CLARITY</div>
           </div>
         )}
         <button
+          type="button"
           className="sidebar-collapse-btn"
           onClick={() => setCollapsed(v => !v)}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={collapsed ? 'false' : 'true'}
         >
-          {collapsed ? '▶' : '◀'}
+          <UiShellIcon name={collapsed ? 'FiChevronRight' : 'FiChevronLeft'} className="sidebar-collapse-icon" />
         </button>
       </div>
 
@@ -132,14 +168,29 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
 
         {/* ── PERSONAL BUDGETS ── */}
         <div className="sidebar-section">
-          <div className="sidebar-section-header" onClick={() => !collapsed && setPersonalOpen(v => !v)}>
-            {!collapsed && <span className="sidebar-section-label">PERSONAL BUDGETS</span>}
+          <div className="sidebar-section-header">
+            <button
+              type="button"
+              className="sidebar-section-toggle"
+              onClick={() => !collapsed && setPersonalOpen(v => !v)}
+              aria-expanded={!collapsed ? (personalOpen ? 'true' : 'false') : undefined}
+            >
+              {!collapsed
+                ? <span className="sidebar-section-label">PERSONAL BUDGETS</span>
+                : <span className="visually-hidden">Personal budgets</span>}
+            </button>
             {!collapsed && (
-              <div className="sidebar-section-actions">
-                <button className="sidebar-icon-btn" title="Manage personal budgets" onClick={e => { e.stopPropagation(); onManageBudgets(); }}>⚙</button>
-                <button className="sidebar-icon-btn" title="New personal budget" onClick={e => openNewForm('personal', e)}>＋</button>
-                <span className="sidebar-chevron">{personalOpen ? '▾' : '▸'}</span>
-              </div>
+              <span className="sidebar-section-actions">
+                <button type="button" className="sidebar-icon-btn" title="Manage personal budgets" aria-label="Manage personal budgets" onClick={e => { e.stopPropagation(); onManageBudgets(); }}>
+                  <UiShellIcon name="FiSettings" />
+                </button>
+                <button type="button" className="sidebar-icon-btn" title="New personal budget" aria-label="New personal budget" onClick={e => openNewForm('personal', e)}>
+                  <UiShellIcon name="FiPlus" />
+                </button>
+                <span className="sidebar-chevron" aria-hidden="true">
+                  {personalOpen ? <UiShellIcon name="FiChevronDown" /> : <UiShellIcon name="FiChevronRight" />}
+                </span>
+              </span>
             )}
           </div>
 
@@ -170,14 +221,29 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
 
         {/* ── DOING BUSINESS ── */}
         <div className="sidebar-section">
-          <div className="sidebar-section-header" onClick={() => !collapsed && setBusinessOpen(v => !v)}>
-            {!collapsed && <span className="sidebar-section-label">DOING BUSINESS</span>}
+          <div className="sidebar-section-header">
+            <button
+              type="button"
+              className="sidebar-section-toggle"
+              onClick={() => !collapsed && setBusinessOpen(v => !v)}
+              aria-expanded={!collapsed ? (businessOpen ? 'true' : 'false') : undefined}
+            >
+              {!collapsed
+                ? <span className="sidebar-section-label">DOING BUSINESS</span>
+                : <span className="visually-hidden">Business budgets</span>}
+            </button>
             {!collapsed && (
-              <div className="sidebar-section-actions">
-                <button className="sidebar-icon-btn" title="Manage business budgets" onClick={e => { e.stopPropagation(); onManageBudgets(); }}>⚙</button>
-                <button className="sidebar-icon-btn" title="New business budget" onClick={e => openNewForm('business', e)}>＋</button>
-                <span className="sidebar-chevron">{businessOpen ? '▾' : '▸'}</span>
-              </div>
+              <span className="sidebar-section-actions">
+                <button type="button" className="sidebar-icon-btn" title="Manage business budgets" aria-label="Manage business budgets" onClick={e => { e.stopPropagation(); onManageBudgets(); }}>
+                  <UiShellIcon name="FiSettings" />
+                </button>
+                <button type="button" className="sidebar-icon-btn" title="New business budget" aria-label="New business budget" onClick={e => openNewForm('business', e)}>
+                  <UiShellIcon name="FiPlus" />
+                </button>
+                <span className="sidebar-chevron" aria-hidden="true">
+                  {businessOpen ? <UiShellIcon name="FiChevronDown" /> : <UiShellIcon name="FiChevronRight" />}
+                </span>
+              </span>
             )}
           </div>
 
@@ -210,33 +276,44 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
 
       {/* ── SETTINGS — pinned to bottom ── */}
       <div className="sidebar-bottom">
-        <div
+        <button
+          type="button"
           className="sidebar-section-header sidebar-settings-header"
           onClick={() => !collapsed && setSettingsOpen(v => !v)}
+          aria-expanded={!collapsed ? (settingsOpen ? 'true' : 'false') : undefined}
+          aria-label={collapsed ? 'Settings' : undefined}
         >
           {!collapsed && <span className="sidebar-section-label">SETTINGS</span>}
           {collapsed
-            ? <span className="sidebar-nav-icon" style={{ margin: '0 auto' }}>⚙️</span>
-            : <span className="sidebar-chevron">{settingsOpen ? '▾' : '▸'}</span>
-          }
-        </div>
+            ? <span className="sidebar-nav-icon sidebar-settings-collapsed-icon" aria-hidden="true"><UiShellIcon name="FiSettings" /></span>
+            : <span className="sidebar-chevron" aria-hidden="true">{settingsOpen ? <UiShellIcon name="FiChevronDown" /> : <UiShellIcon name="FiChevronRight" />}</span>}
+        </button>
 
-        {(collapsed || settingsOpen) && SETTINGS_ITEMS.map(item => (
-          <button
-            key={item.id}
-            className={`sidebar-nav-item${(item.activePages ? item.activePages.includes(page) : page === item.id) ? ' active' : ''}`}
-            onClick={() => setPage(item.id)}
-            title={collapsed ? item.label : undefined}
-          >
-            <span className="sidebar-nav-icon">{item.icon}</span>
-            {!collapsed && <span className="sidebar-nav-label">{item.label}</span>}
-          </button>
-        ))}
+        {(collapsed || settingsOpen) && SETTINGS_ITEMS.map(item => {
+          const active = item.activePages ? item.activePages.includes(page) : page === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`sidebar-nav-item${active ? ' active' : ''}`}
+              onClick={() => setPage(item.id)}
+              title={collapsed ? item.label : undefined}
+              aria-current={active ? 'page' : undefined}
+            >
+              <span className="sidebar-nav-icon" aria-hidden="true"><UiShellIcon name={item.icon} /></span>
+              {!collapsed && <span className="sidebar-nav-label">{item.label}</span>}
+            </button>
+          );
+        })}
 
         {!collapsed && (
           <div className="sidebar-help-row">
-            <span className="sidebar-help-btn" onClick={onHelp} style={{ cursor: 'pointer' }}>⓪ Help</span>
-            <span className="sidebar-help-btn" onClick={() => window.open(`mailto:${FEEDBACK_EMAIL}?subject=Budget%20Ledger%20Feedback`, '_blank')} style={{ cursor: 'pointer' }}>✉ Feedback</span>
+            <button type="button" className="sidebar-help-btn" onClick={onHelp}>
+              <UiShellIcon name="FiHelpCircle" /> Help
+            </button>
+            <button type="button" className="sidebar-help-btn" onClick={() => window.open(`mailto:${FEEDBACK_EMAIL}?subject=Budget%20Ledger%20Feedback`, '_blank')}>
+              <UiShellIcon name="FiMail" /> Feedback
+            </button>
           </div>
         )}
       </div>
@@ -244,4 +321,3 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
     </aside>
   );
 }
-

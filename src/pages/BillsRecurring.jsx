@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import UiShellIcon from '../components/UiShellIcon.jsx';
 
 const FREQUENCIES = ['Daily', 'Weekly', 'Bi-Weekly', 'Monthly', 'Quarterly', 'Annually'];
 const MATCH_TYPES = ['Contains', 'Exact', 'Starts With', 'Ends With'];
@@ -37,7 +38,7 @@ function BillModal({ bill, categories, accounts, onSave, onClose }) {
             <h2>{bill?.id ? 'Edit Bill' : 'New Bill'}</h2>
             <div className="modal-subtitle">Set up a recurring expense or income</div>
           </div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close dialog"><UiShellIcon name="FiX" /></button>
         </div>
 
         <div className="modal-body modal-split">
@@ -94,10 +95,10 @@ function BillModal({ bill, categories, accounts, onSave, onClose }) {
               <label>TYPE</label>
               <div className="bill-type-toggle">
                 <button className={`bill-type-btn${form.billType === 'expense' ? ' active-expense' : ''}`} onClick={() => set('billType', 'expense')}>
-                  ↘ Expense
+                  <UiShellIcon name="FiArrowDownRight" /> Expense
                 </button>
                 <button className={`bill-type-btn${form.billType === 'income' ? ' active-income' : ''}`} onClick={() => set('billType', 'income')}>
-                  ↗ Income
+                  <UiShellIcon name="FiArrowUpRight" /> Income
                 </button>
               </div>
             </div>
@@ -121,9 +122,9 @@ function BillModal({ bill, categories, accounts, onSave, onClose }) {
 
           {/* Right: Transaction history preview */}
           <div className="bill-history-panel">
-            <div className="bill-history-title">⏱ TRANSACTION HISTORY</div>
+            <div className="bill-history-title"><UiShellIcon name="FiClock" /> TRANSACTION HISTORY</div>
             <div className="bill-history-empty">
-              <div className="bill-history-icon">📅</div>
+              <div className="bill-history-icon"><UiShellIcon name="FiCalendar" /></div>
               <div>Enter a payee pattern to see matching transactions</div>
             </div>
           </div>
@@ -200,10 +201,10 @@ export default function BillsRecurring({ data, addBill, updateBill, deleteBill }
         </div>
         <div className="bills-header-actions">
           <button className="btn-outline bills-detect-btn" title="Scan transactions for recurring patterns">
-            🔍 Detect Bills
+            <UiShellIcon name="FiSearch" /> Detect Bills
           </button>
           <button className="btn-primary" onClick={() => { setEditingBill(null); setShowModal(true); }}>
-            ＋ New Bill
+            <UiShellIcon name="FiPlus" /> New Bill
           </button>
         </div>
       </div>
@@ -211,25 +212,25 @@ export default function BillsRecurring({ data, addBill, updateBill, deleteBill }
       {/* Stats tiles */}
       <div className="bills-stats">
         <div className="bills-stat-tile bills-stat-expense">
-          <div className="bills-stat-icon">↘</div>
+          <div className="bills-stat-icon"><UiShellIcon name="FiArrowDownRight" /></div>
           <div className="bills-stat-label">MONTHLY FIXED</div>
           <div className="bills-stat-val">{fmt(monthlyFixed)}</div>
           <div className="bills-stat-sub">Recurring expenses</div>
         </div>
         <div className="bills-stat-tile bills-stat-income">
-          <div className="bills-stat-icon">↗</div>
+          <div className="bills-stat-icon"><UiShellIcon name="FiArrowUpRight" /></div>
           <div className="bills-stat-label">MONTHLY INCOME</div>
           <div className="bills-stat-val">{fmt(monthlyIncome)}</div>
           <div className="bills-stat-sub">Recurring revenue</div>
         </div>
         <div className="bills-stat-tile bills-stat-next">
-          <div className="bills-stat-icon">⏰</div>
+          <div className="bills-stat-icon"><UiShellIcon name="FiClock" /></div>
           <div className="bills-stat-label">NEXT BILL</div>
           <div className="bills-stat-val">{nextBill ? fmt(nextBill.amount) : '—'}</div>
           <div className="bills-stat-sub">{nextBill ? `Due ${new Date(nextBill.nextDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'No upcoming bills'}</div>
         </div>
         <div className="bills-stat-tile bills-stat-week">
-          <div className="bills-stat-icon">📅</div>
+          <div className="bills-stat-icon"><UiShellIcon name="FiCalendar" /></div>
           <div className="bills-stat-label">THIS WEEK</div>
           <div className="bills-stat-val">{thisWeek}</div>
           <div className="bills-stat-sub">Bill{thisWeek !== 1 ? 's' : ''} due soon</div>
@@ -239,10 +240,10 @@ export default function BillsRecurring({ data, addBill, updateBill, deleteBill }
       {/* Bills list by category */}
       {bills.length === 0 ? (
         <div className="bills-empty">
-          <div>🔄</div>
+          <div className="bills-empty-icon"><UiShellIcon name="FiRefreshCw" /></div>
           <div className="bills-empty-title">No recurring bills yet</div>
           <div className="bills-empty-sub">Add bills to track your recurring expenses and income</div>
-          <button className="btn-primary" onClick={() => { setEditingBill(null); setShowModal(true); }}>＋ Add First Bill</button>
+          <button className="btn-primary" onClick={() => { setEditingBill(null); setShowModal(true); }}><UiShellIcon name="FiPlus" /> Add First Bill</button>
         </div>
       ) : (
         <div className="bills-list">
@@ -277,8 +278,26 @@ export default function BillsRecurring({ data, addBill, updateBill, deleteBill }
                         <span className="bills-row-due">{daysUntil(bill.nextDueDate)}</span>
                       )}
                       <div className="bills-row-actions">
-                        <button className="icon-btn" onClick={() => { setEditingBill(bill); setShowModal(true); }} title="Edit">✏️</button>
-                        <button className="icon-btn icon-btn-danger" onClick={() => deleteBill(bill.id)} title="Delete">🗑️</button>
+                        <button
+                          type="button"
+                          className="icon-btn bills-action-btn"
+                          onClick={() => { setEditingBill(bill); setShowModal(true); }}
+                          aria-label={`Edit ${bill.name}`}
+                          title={`Edit ${bill.name}`}
+                        >
+                          <UiShellIcon name="FiEdit2" />
+                          <span className="bills-action-label">Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn icon-btn-danger bills-action-btn"
+                          onClick={() => deleteBill(bill.id)}
+                          aria-label={`Delete ${bill.name}`}
+                          title={`Delete ${bill.name}`}
+                        >
+                          <UiShellIcon name="FiTrash2" />
+                          <span className="bills-action-label">Delete</span>
+                        </button>
                       </div>
                     </div>
                   </div>

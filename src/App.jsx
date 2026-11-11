@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import NavBar from './components/NavBar.jsx';
+import UiShellIcon from './components/UiShellIcon.jsx';
+import UiShellDemoBanner from './components/UiShellDemoBanner.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import AnnualBudget from './pages/AnnualBudget.jsx';
 import Expenses from './pages/Expenses.jsx';
@@ -40,14 +42,16 @@ function DesktopTitleBar({ isMaximized, onMaximizedChange }) {
     <header className="desktop-titlebar">
       <div className="desktop-titlebar-drag" onDoubleClick={handleToggleMaximize}>
         <div className="desktop-titlebar-brand">
-          <span className="desktop-titlebar-logo">📒</span>
+          <span className="desktop-titlebar-logo" aria-hidden="true"><UiShellIcon name="FiBookOpen" /></span>
           <span className="desktop-titlebar-title">Budget Ledger</span>
         </div>
       </div>
       <div className="desktop-titlebar-actions">
-        <button className="desktop-titlebar-btn" type="button" onClick={handleMinimize} aria-label="Minimize window">−</button>
-        <button className="desktop-titlebar-btn" type="button" onClick={handleToggleMaximize} aria-label={isMaximized ? 'Restore window' : 'Maximize window'}>{isMaximized ? '❐' : '□'}</button>
-        <button className="desktop-titlebar-btn desktop-titlebar-btn-close" type="button" onClick={handleClose} aria-label="Close window">✕</button>
+        <button className="desktop-titlebar-btn" type="button" onClick={handleMinimize} aria-label="Minimize window"><UiShellIcon name="FiMinus" /></button>
+        <button className="desktop-titlebar-btn" type="button" onClick={handleToggleMaximize} aria-label={isMaximized ? 'Restore window' : 'Maximize window'}>
+          <UiShellIcon name={isMaximized ? 'FiMinimize' : 'FiMaximize'} />
+        </button>
+        <button className="desktop-titlebar-btn desktop-titlebar-btn-close" type="button" onClick={handleClose} aria-label="Close window"><UiShellIcon name="FiX" /></button>
       </div>
     </header>
   );
@@ -156,6 +160,7 @@ export default function App() {
       return (
         <div className={`app-shell${isWindowMaximized ? ' app-shell-maximized' : ''}`}>
           <DesktopTitleBar isMaximized={isWindowMaximized} onMaximizedChange={setIsWindowMaximized} />
+          <UiShellDemoBanner />
           <div className="app-layout">
             <NavBar
               page={page}
@@ -169,7 +174,7 @@ export default function App() {
             />
             <main className="main-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
               <div className="card" style={{ maxWidth: 680, width: '100%', textAlign: 'center', display: 'grid', gap: 12 }}>
-                <div style={{ fontSize: 44 }}>📒</div>
+                <div className="empty-state-logo" aria-hidden="true"><UiShellIcon name="FiBookOpen" /></div>
                 <h2 style={{ margin: 0 }}>No Budget Data Yet</h2>
                 <div className="subtitle">Create an empty budget, restore a backup, or start from a template.</div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -197,7 +202,7 @@ export default function App() {
     return (
       <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
         <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📒</div>
+          <div className="empty-state-logo" aria-hidden="true" style={{ margin: '0 auto 16px' }}><UiShellIcon name="FiBookOpen" /></div>
           <div style={{ fontSize: 18 }}>Loading Budget Ledger…</div>
         </div>
       </div>
@@ -207,6 +212,7 @@ export default function App() {
   return (
     <div className={`app-shell${isWindowMaximized ? ' app-shell-maximized' : ''}`}>
       <DesktopTitleBar isMaximized={isWindowMaximized} onMaximizedChange={setIsWindowMaximized} />
+      <UiShellDemoBanner />
       <div className="app-layout">
         <NavBar
           page={page}

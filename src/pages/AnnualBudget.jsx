@@ -1,5 +1,12 @@
 import { Fragment, useState, useMemo } from 'react';
 import { MONTHS } from '../data/defaults.js';
+import UiShellIcon from '../components/UiShellIcon.jsx';
+import {
+  budgetYears,
+  yearOptionsFor,
+  defaultYearFor,
+  budgetMetaForYear,
+} from '../components/UiShellBudgetSelection.js';
 
 const fmt = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
@@ -21,37 +28,32 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
     [budgetList, currentType]
   );
 
-  const yearsWithData = useMemo(() => {
-    const years = sameTypeBudgetList
-      .map((b) => Number(b?.year))
-      .filter(Number.isFinite);
-    return Array.from(new Set(years)).sort((a, b) => b - a);
-  }, [sameTypeBudgetList]);
+  const metadataYears = useMemo(() => budgetYears(sameTypeBudgetList), [sameTypeBudgetList]);
 
-  const defaultYear = Number.isFinite(Number(currentBudget?.year))
-    ? Number(currentBudget.year)
-    : (yearsWithData[0] || currentYear);
-  const [selectedYear, setSelectedYear] = useState(defaultYear);
+  const defaultYearValue = useMemo(
+    () => defaultYearFor({ budgetList: sameTypeBudgetList, currentId, currentYear }),
+    [sameTypeBudgetList, currentId, currentYear]
+  );
+  const [selectedYear, setSelectedYear] = useState(defaultYearValue);
 
-  const yearOptions = useMemo(() => {
-    const years = Array.from(new Set([currentYear, ...yearsWithData]));
-    years.sort((a, b) => b - a);
-    return years.length ? years : [selectedYear];
-  }, [yearsWithData, selectedYear, currentYear]);
+  const yearOptions = useMemo(
+    () => yearOptionsFor(metadataYears, currentYear),
+    [metadataYears, currentYear]
+  );
 
-  const selectedYearValue = yearOptions.includes(selectedYear) ? selectedYear : defaultYear;
+  const selectedYearValue = yearOptions.includes(selectedYear) ? selectedYear : defaultYearValue;
 
   const handleYearChange = (nextYear) => {
     const y = Number(nextYear);
     setSelectedYear(y);
-    const target = sameTypeBudgetList.find((b) => Number(b?.year) === y)?.id;
-    if (target && target !== currentId) onSwitchBudget(target);
+    const meta = budgetMetaForYear({ budgetList: sameTypeBudgetList, currentId, year: y });
+    if (meta && meta.id !== currentId) onSwitchBudget(meta.id);
   };
 
-  const activeBudgetMeta = useMemo(() => {
-    if (Number(currentBudget?.year) === Number(selectedYearValue)) return currentBudget;
-    return sameTypeBudgetList.find((b) => Number(b?.year) === Number(selectedYearValue)) || null;
-  }, [currentBudget, sameTypeBudgetList, selectedYearValue]);
+  const activeBudgetMeta = useMemo(
+    () => budgetMetaForYear({ budgetList: sameTypeBudgetList, currentId, year: selectedYearValue }),
+    [sameTypeBudgetList, currentId, selectedYearValue]
+  );
 
   const emptyData = useMemo(() => {
     const sourceCategories = data.categories || {};
@@ -126,7 +128,12 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
         {canEdit ? 'Click any cell to edit. Changes are saved automatically.' : `No ${currentType} budget exists for ${selectedYearValue}. Showing an empty annual view.`}
       </p>
 
-      <div className="table-wrapper">
+      <div
+        className="table-wrapper table-scroll-region"
+        role="region"
+        aria-label={`Annual budget table for ${selectedYearValue}`}
+        tabIndex={0}
+      >
         <table className="data-table budget-table">
           <thead>
             <tr>
@@ -200,6 +207,9 @@ export default function AnnualBudget({ data, allBudgets = {}, updateBudget, budg
             </tr>
           </tbody>
         </table>
+      </div>
+      <div className="table-scroll-hint" aria-hidden="true">
+        <UiShellIcon name="FiChevronsRight" /> Scroll horizontally to see all months
       </div>
     </div>
   );

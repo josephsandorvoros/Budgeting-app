@@ -13,6 +13,7 @@
     "desktop:dev": "concurrently -k \"npm run dev\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test tests/",
     "preview": "vite preview",
     "backend": "python backend/main.py",
     "build:backend": "python -m PyInstaller --noconfirm --onefile --name budget-ledger-backend --distpath backend/dist --workpath backend/build --specpath backend backend/main.py",
