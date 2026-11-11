@@ -92,3 +92,18 @@ test('old viewport thresholds no longer own the section layout', () => {
     'section grids should not keep viewport-only 900px collapse rules',
   );
 });
+
+test('monthly dashboard metrics use four columns or two columns at smaller desktop widths', () => {
+  const css = readFileSync(CSS_PATH, 'utf8');
+  assert.match(ruleBody(css, '.dashboard-month-tiles'), /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  const desktopRule = extractAtRules(css, 'media').find(rule => /max-width:\s*1200px/.test(rule) && rule.includes('.dashboard-month-tiles'));
+  assert.ok(desktopRule);
+  assert.match(desktopRule, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+});
+
+test('dashboard distinguishes overallocated plans and names the investments overview correctly', () => {
+  const source = readFileSync(new URL('../../src/pages/Dashboard.jsx', import.meta.url), 'utf8');
+  assert.match(source, /leftToAllocate < 0 \? '-' : ''\}\{fmt\(monthOverview\.leftToAllocate\)\}/);
+  assert.match(source, /leftToAllocate < 0 \? 'Overallocated' : 'Left to allocate'/);
+  assert.match(source, /Annual \{group === 'Debt' \? 'Debt Payoff' : group\} Overview/);
+});

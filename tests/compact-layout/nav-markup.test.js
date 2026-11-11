@@ -77,3 +77,26 @@ test('personal and business sections keep separate toggle and action controls', 
   assert.match(source, /setBusinessOpen/);
   assert.match(source, /onManageBudgets/);
 });
+
+test('active budgets expose destinations by default while preserving explicit collapse choices', () => {
+  const source = readFileSync(NAV_PATH, 'utf8');
+
+  assert.match(source, /expanded=\{expandedPersonal\[b\.id\] \?\? \(currentId === b\.id\)\}/);
+  assert.match(source, /expanded=\{expandedBiz\[b\.id\] \?\? \(currentId === b\.id\)\}/);
+  assert.equal((source.match(/!\(prev\[id\] \?\? \(id === currentId\)\)/g) || []).length, 2);
+  assert.match(source, /title=\{b\.name\}/);
+});
+
+test('transaction sorting and filtering expose keyboard controls and state', () => {
+  const source = readFileSync(new URL('../../src/pages/Expenses.jsx', import.meta.url), 'utf8');
+  const sortHeader = source.slice(source.indexOf('function SortTh('), source.indexOf('export default function Expenses('));
+
+  assert.match(sortHeader, /<button[\s\S]*?type="button"[\s\S]*?onClick=\{\(\) => onSort\(col\)\}/);
+  assert.match(sortHeader, /scope="col"/);
+  assert.match(sortHeader, /aria-sort=/);
+  assert.match(source, /aria-label="Transaction period"/);
+  assert.match(source, /aria-label="Transaction category"/);
+  assert.match(source, /aria-label="Search transactions"/);
+  assert.match(source, /aria-pressed=\{typeFilter === v\}/);
+  assert.match(source, /aria-label="Transactions table" tabIndex=\{0\}/);
+});

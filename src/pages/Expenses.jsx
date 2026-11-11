@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import UiShellIcon from '../components/UiShellIcon.jsx';
 import {
   GROUPS,
   TRANSACTION_TYPES as TYPES,
@@ -138,9 +139,17 @@ function sortTxs(txs, col, dir) {
 function SortTh({ col, sortCol, sortDir, onSort, children, style }) {
   const active = sortCol === col;
   return (
-    <th className={`tx-th${col ? ' tx-th-sortable' : ''}`} style={style} onClick={() => col && onSort(col)}>
-      {children}
-      {col && <span className="tx-sort-icon">{active ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}</span>}
+    <th className="tx-th tx-th-sortable" scope="col" style={style} aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button
+        type="button"
+        className="tx-sort-btn"
+        onClick={() => onSort(col)}
+        aria-label={`Sort by ${children} ${active && sortDir === 'asc' ? 'descending' : 'ascending'}`}
+        style={{ justifyContent: style?.textAlign === 'right' ? 'flex-end' : 'flex-start' }}
+      >
+        {children}
+        <UiShellIcon name={active && sortDir === 'asc' ? 'FiArrowUp' : 'FiArrowDown'} className="tx-sort-icon" />
+      </button>
     </th>
   );
 }
@@ -363,47 +372,48 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
               <span>{fmtAbs(transferTotal)}</span>
             </span>
           </div>
-          <button className="btn-primary" onClick={() => setShowForm(v => !v)}>
-            {showForm ? '✕ Cancel' : '+ Add'}
+          <button className="btn-primary tx-command" onClick={() => setShowForm(v => !v)} aria-expanded={showForm}>
+            <UiShellIcon name={showForm ? 'FiX' : 'FiPlus'} />
+            {showForm ? 'Cancel' : 'Add transaction'}
           </button>
-          <button className="btn-ghost" onClick={() => csvInputRef.current?.click()}>⬆ Import CSV</button>
-          <input ref={csvInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={handleCSVFile} />
+          <button className="btn-ghost tx-command" onClick={() => csvInputRef.current?.click()}><UiShellIcon name="FiUpload" />Import CSV</button>
+          <input ref={csvInputRef} type="file" aria-label="Import transactions CSV" accept=".csv,text/csv" style={{ display: 'none' }} onChange={handleCSVFile} />
         </div>
       </div>
 
       {/* ── Filter bar ── */}
       <div className="tx-filter-bar">
         <div className="tx-filter-left">
-          <select className="tx-filter-select" value={period} onChange={e => setPeriod(e.target.value)}>
+          <select className="tx-filter-select" aria-label="Transaction period" value={period} onChange={e => setPeriod(e.target.value)}>
             {TIME_PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
 
-          <select className="tx-filter-select" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
-            <option value="">⊕ Category</option>
+          <select className="tx-filter-select" aria-label="Transaction category" value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+            <option value="">All categories</option>
             {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
 
-          <div className="tx-type-pills">
+          <div className="tx-type-pills" role="group" aria-label="Transaction type">
             {[['all','All'],['income','Income'],['expense','Expense'],['savings','Savings'],['debt','Debt'],['transfer','Transfer']].map(([v, l]) => (
-              <button key={v} className={`tx-pill${typeFilter === v ? ' tx-pill-active' : ''}`} onClick={() => setTypeFilter(v)}>{l}</button>
+              <button key={v} className={`tx-pill${typeFilter === v ? ' tx-pill-active' : ''}`} aria-pressed={typeFilter === v} onClick={() => setTypeFilter(v)}>{l}</button>
             ))}
           </div>
 
-          <div className="tx-type-pills">
-            <button className={`tx-pill${reviewed === 'reviewed' ? ' tx-pill-active' : ''}`} onClick={() => setReviewed(r => r === 'reviewed' ? 'all' : 'reviewed')}>✓ Reviewed</button>
-            <button className={`tx-pill${reviewed === 'unreviewed' ? ' tx-pill-active' : ''}`} onClick={() => setReviewed(r => r === 'unreviewed' ? 'all' : 'unreviewed')}>Unreviewed</button>
+          <div className="tx-type-pills" role="group" aria-label="Review status">
+            <button className={`tx-pill${reviewed === 'reviewed' ? ' tx-pill-active' : ''}`} aria-pressed={reviewed === 'reviewed'} onClick={() => setReviewed(r => r === 'reviewed' ? 'all' : 'reviewed')}>Reviewed</button>
+            <button className={`tx-pill${reviewed === 'unreviewed' ? ' tx-pill-active' : ''}`} aria-pressed={reviewed === 'unreviewed'} onClick={() => setReviewed(r => r === 'unreviewed' ? 'all' : 'unreviewed')}>Unreviewed</button>
           </div>
         </div>
 
         <div className="tx-filter-right">
-          <input className="tx-search" placeholder="🔍 Search..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="search" className="tx-search" aria-label="Search transactions" placeholder="Search transactions" value={search} onChange={e => setSearch(e.target.value)} />
 
           <div className="tx-col-picker-wrapper">
-            <button className="tx-col-btn" onClick={() => setShowColPicker(v => !v)}>
+            <button className="tx-col-btn" aria-expanded={showColPicker} aria-controls="transaction-columns" onClick={() => setShowColPicker(v => !v)}>
               Columns · {visibleCols.size}
             </button>
             {showColPicker && (
-              <div className="tx-col-dropdown">
+              <div className="tx-col-dropdown" id="transaction-columns" role="group" aria-label="Visible columns">
                 {ALL_COLS.map(c => (
                   <label key={c.id} className="tx-col-option">
                     <input type="checkbox" checked={visibleCols.has(c.id)} onChange={() => toggleCol(c.id)} />
@@ -538,7 +548,7 @@ export default function Expenses({ data, addTransaction, deleteTransaction, upda
       )}
 
       {/* ── Transaction Table ── */}
-      <div className="tx-table-wrapper">
+      <div className="tx-table-wrapper table-scroll-region" role="region" aria-label="Transactions table" tabIndex={0}>
         <table className="tx-table">
           <thead>
             <tr className="tx-thead-row">

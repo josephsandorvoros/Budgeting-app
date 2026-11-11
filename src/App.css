@@ -3031,6 +3031,28 @@ input[type="checkbox"] {
   .tx-th-sortable:hover { color: var(--text); }
   .tx-sort-icon { font-size: 0.65rem; color: var(--muted); }
 
+  .tx-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-transform: inherit;
+  }
+
+  .tx-command {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+  }
+
   /* Month group header row */
   .tx-month-header-row td {
     padding: 0;
@@ -3509,19 +3531,72 @@ button.sidebar-section-header {
 /* Dashboard: current-month overview heading controls */
 .dashboard-month-selector select { min-width: 90px; }
 
-/* Dashboard: suggested next actions */
-.next-actions-card {
-  padding: 16px;
-  display: grid;
-  gap: 10px;
+.dashboard-page .page-heading-left {
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
-.next-actions-title {
-  font-size: 0.72rem;
+.dashboard-page .page-heading-sub { overflow-wrap: anywhere; }
+
+.dashboard-month-tiles {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-month-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.dashboard-page .stat-tile {
+  min-width: 0;
+  border-radius: 6px;
+}
+
+.dashboard-page .stat-tile-header {
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  letter-spacing: 0;
+}
+
+.dashboard-page .stat-tile-body {
+  padding: 14px;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-page .stat-tile-amount { font-size: 1.65rem; }
+.dashboard-page .stat-tile-pct { font-size: 0.9rem; }
+
+.dashboard-page .stat-tile-label {
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.dashboard-page .section-block {
+  margin-bottom: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.dashboard-page .section-block > .section-header {
+  background: transparent;
+  letter-spacing: 0;
+}
+
+/* Dashboard: suggested next actions */
+.next-actions-card {
+  padding: 16px 0;
+  display: grid;
+  gap: 10px;
+  border-block: 1px solid var(--border);
+}
+
+.page .next-actions-title {
+  margin: 0;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .next-actions-list {
@@ -3536,10 +3611,10 @@ button.sidebar-section-header {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  padding: 10px 14px;
-  background: var(--nav-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 10px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
   color: var(--text);
   font-size: 0.9rem;
   text-align: left;
@@ -3573,9 +3648,10 @@ button.sidebar-section-header {
   gap: 10px;
   width: 100%;
   padding: 12px 16px;
-  background: var(--nav-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   color: var(--text);
   font-weight: 600;
   font-size: 0.9rem;

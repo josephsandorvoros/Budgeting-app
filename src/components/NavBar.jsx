@@ -50,7 +50,7 @@ function BudgetGroup({ b, isActive, expanded, page, accentClass, icon, onToggle,
         type="button"
         className={`sidebar-nav-item sidebar-biz-header${isActive ? ` active ${accentClass}` : ''}`}
         onClick={() => { onToggle(b.id); onSwitch(b.id); }}
-        title={collapsed ? b.name : undefined}
+        title={b.name}
         aria-label={collapsed ? `Switch to ${b.name}` : undefined}
         aria-expanded={!collapsed ? (expanded ? 'true' : 'false') : undefined}
       >
@@ -134,10 +134,10 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
   };
 
   const togglePersonal = (id) =>
-    setExpandedPersonal(prev => ({ ...prev, [id]: !prev[id] }));
+    setExpandedPersonal(prev => ({ ...prev, [id]: !(prev[id] ?? (id === currentId)) }));
 
   const toggleBiz = (id) =>
-    setExpandedBiz(prev => ({ ...prev, [id]: !prev[id] }));
+    setExpandedBiz(prev => ({ ...prev, [id]: !(prev[id] ?? (id === currentId)) }));
 
   return (
     <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`} aria-label="Primary navigation">
@@ -207,7 +207,7 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
               key={b.id}
               b={b}
               isActive={currentId === b.id}
-              expanded={expandedPersonal[b.id]}
+              expanded={expandedPersonal[b.id] ?? (currentId === b.id)}
               page={page}
               accentClass=""
               icon={b.icon || '📈'}
@@ -260,7 +260,7 @@ export default function NavBar({ page, setPage, budgetList, currentId, onSwitchB
               key={b.id}
               b={b}
               isActive={currentId === b.id}
-              expanded={expandedBiz[b.id]}
+              expanded={expandedBiz[b.id] ?? (currentId === b.id)}
               page={page}
               accentClass="sidebar-biz-active"
               icon={b.icon || '💼'}

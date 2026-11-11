@@ -323,7 +323,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
               {/* Overview */}
               <div className="overview-panel">
                 <div className="section-panel-title">
-                  {group === 'Income' ? 'Annual Income Overview' : group === 'Expenses' ? 'Annual Expenses Overview' : group === 'Debt' ? 'Annual Debt Payoff Overview' : 'Annual Savings Overview'}
+                  Annual {group === 'Debt' ? 'Debt Payoff' : group} Overview
                 </div>
                 <div className="overview-row">
                   <span>{group === 'Income' ? 'Goal' : 'Budget'}</span>
@@ -505,14 +505,14 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
   };
 
   return (
-    <div className="page">
+    <div className="page dashboard-page">
       {/* Page heading */}
       <div className="page-heading">
         <div className="page-heading-left">
           <h1>Dashboard</h1>
           <span className="page-heading-sub">
             {MONTHS[selectedMonth]} {selectedYearValue}
-            {activeBudgetMeta && activeBudgetMeta.id !== currentId ? ` · ${activeBudgetMeta.name}` : ''}
+            {(activeBudgetMeta?.name || currentBudget?.name) ? ` · ${activeBudgetMeta?.name || currentBudget.name}` : ''}
           </span>
         </div>
         <div className="month-selector dashboard-month-selector">
@@ -576,9 +576,9 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
           <h3 className="stat-tile-header section-header savings">PLAN BALANCE</h3>
           <div className="stat-tile-body">
             <div className="stat-tile-amount" style={{ color: monthOverview.leftToAllocate >= 0 ? 'var(--savings-accent)' : 'var(--danger)' }}>
-              {fmt(monthOverview.leftToAllocate)}
+              {monthOverview.leftToAllocate < 0 ? '-' : ''}{fmt(monthOverview.leftToAllocate)}
             </div>
-            <div className="stat-tile-label">Left to allocate in {MONTHS[selectedMonth]}</div>
+            <div className="stat-tile-label">{monthOverview.leftToAllocate < 0 ? 'Overallocated' : 'Left to allocate'} in {MONTHS[selectedMonth]}</div>
             <div className="stat-tile-under">
               {fmt(monthOverview.incomePlan)} income − {fmt(monthOverview.plannedOutflows)} planned outflows
             </div>
@@ -606,8 +606,8 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
 
       {/* Suggested next actions */}
       {nextActions.length > 0 && (
-        <div className="card next-actions-card">
-          <div className="next-actions-title">Suggested next steps</div>
+        <section className="next-actions-card" aria-labelledby="dashboard-next-actions-title">
+          <h2 className="next-actions-title" id="dashboard-next-actions-title">Next steps</h2>
           <div className="next-actions-list">
             {nextActions.map((action) => (
               <button key={action.id} type="button" className="next-action-btn" onClick={() => goToNextAction(action.target)}>
@@ -619,7 +619,7 @@ export default function Dashboard({ data, allBudgets = {}, budgetList = [], curr
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* Annual details (progressive disclosure) */}
